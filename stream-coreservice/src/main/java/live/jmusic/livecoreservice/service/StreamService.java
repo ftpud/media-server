@@ -1,18 +1,15 @@
-package live.jmusic.streamcoreservice.service;
+package live.jmusic.livecoreservice.service;
 
 import live.jmusic.shared.model.RotationItem;
-import live.jmusic.shared.rest.RestClient;
 import live.jmusic.shared.rest.RestRequestService;
-import live.jmusic.streamcoreservice.model.TimedItem;
+import live.jmusic.livecoreservice.util.VideoFilterBuilder;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tomcat.jni.Proc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
 @Service
 @Slf4j
@@ -104,7 +101,30 @@ public class StreamService {
                     "-c:v",
                     "h264",
                     "-vf",
-                    "scale=(iw*sar)*min(1920/(iw*sar)\\,1080/ih):ih*min(1920/(iw*sar)\\,1080/ih),pad=1920:1080:(1920-iw*min(1920/iw\\,1080/ih))/2:(1080-ih*min(1920/iw\\,1080/ih))/2",
+                    VideoFilterBuilder.create()
+                            .withScale(1920,1080)
+                            .withPad(1920,1080)
+                            .withDrawText()
+                                .withText(currentItem.getMediaItem().getTitle())
+                                .withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc")
+                                .withPosition("2","2")
+                                .withFontSize(24)
+                                .withFontColor("white")
+                                .withBox("black")
+                                .withBoxBorder(4)
+                                .buildDrawText()
+
+                            .withDrawText()
+                                .withTextFile("live.txt")
+                                .withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc")
+                                .withPosition("2","H-th")
+                                .withFontSize(24)
+                                .withFontColor("white")
+                                .withBox("black@0.4")
+                                .withBoxBorder(4)
+                                .withReload(1)
+                                .buildDrawText()
+                            .build(),
                     "-r",
                     "30",
                     "-g",
@@ -143,4 +163,11 @@ public class StreamService {
         }
     }
 
+
+    /*
+
+       $"drawtext=text='{title.Replace("'", "").Replace("\"", "")}':fontcolor=white@0.8:fontfile=/usr/share/fonts/truetype/wqy/wqy-microhei.ttc:fontsize={SONG_NAME_FONT_SIZE}:x=2:y=2:box=1:boxcolor=black@0.4:boxborderw=4," +
+                $"drawtext=textfile=live.txt:fontcolor=white@0.8:fontfile=/usr/share/fonts/truetype/wqy/wqy-microhei.ttc:fontsize={INFO_FONT_SIZE}:x=0:y=H-th-0:box=1:boxcolor=black@0.4:reload=1," +
+
+     */
 }

@@ -1,4 +1,4 @@
-package live.jmusic.streamcoreservice;
+package live.jmusic.livecoreservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

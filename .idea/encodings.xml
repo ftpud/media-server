@@ -3,6 +3,7 @@
   <component name="Encoding">
     <file url="file://$PROJECT_DIR$/balance-coreservice/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/balance-coreservice/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/live-coreservice/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/media-coreservice/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/media-coreservice/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/media-shared/src/main/java" charset="UTF-8" />

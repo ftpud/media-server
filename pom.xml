@@ -28,6 +28,7 @@
         <module>media-coreservice</module>
         <module>stream-coreservice</module>
         <module>publisher-coreservice</module>
+        <module>live-coreservice</module>
     </modules>
 
     <dependencies>

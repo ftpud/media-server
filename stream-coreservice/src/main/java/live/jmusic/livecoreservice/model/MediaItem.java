@@ -1,4 +1,4 @@
-package live.jmusic.streamcoreservice.model;
+package live.jmusic.livecoreservice.model;
 
 import lombok.Data;
 
