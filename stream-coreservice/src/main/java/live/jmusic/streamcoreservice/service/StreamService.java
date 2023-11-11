@@ -1,8 +1,8 @@
-package live.jmusic.livecoreservice.service;
+package live.jmusic.streamcoreservice.service;
 
 import live.jmusic.shared.model.RotationItem;
 import live.jmusic.shared.rest.RestRequestService;
-import live.jmusic.livecoreservice.util.VideoFilterBuilder;
+import live.jmusic.streamcoreservice.util.VideoFilterBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;

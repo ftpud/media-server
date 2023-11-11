@@ -1,6 +1,6 @@
-package live.jmusic.livecoreservice;
+package live.jmusic.streamcoreservice;
 
-import live.jmusic.livecoreservice.service.StreamService;
+import live.jmusic.streamcoreservice.service.StreamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;

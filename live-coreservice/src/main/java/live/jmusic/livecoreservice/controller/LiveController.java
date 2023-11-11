@@ -8,7 +8,7 @@ import java.io.IOException;
 
 @RestController
 @RequestMapping("/live")
-public class Controller {
+public class LiveController {
 
     @Autowired
     LiveService liveService;

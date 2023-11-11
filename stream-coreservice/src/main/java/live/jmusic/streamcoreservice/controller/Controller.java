@@ -1,6 +1,6 @@
-package live.jmusic.livecoreservice.controller;
+package live.jmusic.streamcoreservice.controller;
 
-import live.jmusic.livecoreservice.service.StreamService;
+import live.jmusic.streamcoreservice.service.StreamService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

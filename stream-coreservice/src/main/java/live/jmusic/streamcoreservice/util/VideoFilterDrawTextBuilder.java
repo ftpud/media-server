@@ -1,4 +1,4 @@
-package live.jmusic.livecoreservice.util;
+package live.jmusic.streamcoreservice.util;
 
 import java.util.ArrayList;
 import java.util.List;
