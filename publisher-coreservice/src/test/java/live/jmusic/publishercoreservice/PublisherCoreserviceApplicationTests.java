@@ -1,0 +1,8 @@
+package live.jmusic.publishercoreservice;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+class PublisherCoreserviceApplicationTests {
+
+}
