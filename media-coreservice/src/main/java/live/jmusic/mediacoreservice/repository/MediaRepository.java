@@ -1,8 +1,7 @@
 package live.jmusic.mediacoreservice.repository;
 
-import live.jmusic.mediacoreservice.repository.model.MediaItem;
+import live.jmusic.shared.model.MediaItem;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.repository.CrudRepository;
 
 import java.util.Optional;
 
@@ -13,6 +12,7 @@ public interface MediaRepository extends JpaRepository<MediaItem, Long> {
     Optional<MediaItem> findById(Long aLong);
 
     Optional<MediaItem> findByFullpath(String fullpath);
+
 
 
 }

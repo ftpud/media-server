@@ -6,14 +6,16 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
 
-@SpringBootApplication
 @Slf4j
+@SpringBootApplication
+@ComponentScan("live.jmusic.*")
 public class PublisherCoreServiceApplication implements ApplicationRunner {
 
 	public static void main(String[] args) {
@@ -26,21 +28,42 @@ public class PublisherCoreServiceApplication implements ApplicationRunner {
 	@Value("${media.publisher.ffmpeg.app}")
 	public String publisherApp;
 
+	Process blancerProcess;
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
 
-		System.out.println("Hello world from Command Line Runner");
-		doShit();
+		System.out.println("Started");
+		run();
 
 	}
 
-	private void doShit() throws IOException {
+	private void runBalancer() throws IOException {
+		blancerProcess = new ProcessBuilder("java -jar balance-coreservice.jar".split(" "))
+				.redirectErrorStream(true)
+				.redirectOutput(new File("log-balance.log"))
+				.start();
+		log.info("Balancer started.");
+	}
+
+	private void stopBalancer() throws InterruptedException {
+		if(blancerProcess != null && blancerProcess.isAlive()) {
+			log.info("Balancer destroyed.");
+			blancerProcess.destroy();
+			blancerProcess.waitFor();
+		}
+	}
+
+	private void run() throws IOException, InterruptedException {
 		log.info("Executing publisher");
 
 		while(true) {
+			runBalancer();
+
+
 			Process process = new ProcessBuilder((publisherPath + publisherApp + " -loglevel error -f concat -i list.txt -flags low_delay -movflags +faststart -bsf:v h264_mp4toannexb -c copy -f flv rtmp://192.168.0.129/test").split(" "))
 					.directory(new File(publisherPath))
-					.redirectErrorStream(true).start();
+					.redirectErrorStream(true)
+					.start();
 
 			try (InputStreamReader isr = new InputStreamReader(process.getInputStream())) {
 				int c;
@@ -50,11 +73,10 @@ public class PublisherCoreServiceApplication implements ApplicationRunner {
 				}
 			}
 
-			log.info("Publisher terminated. Restarting.");
+			process.waitFor();
+			log.info("Publisher terminated.");
+			stopBalancer();
 		}
 
-		// ffmpeg -loglevel error -i list.txt -flags low_delay -movflags +faststart -bsf:v h264_mp4toannexb c copy -f flv rtmp://192.168.0.129/test
-
-		// ffmpeg/ffmpeg -re -i 1.flv -b:a 256k -c:a aac -ar 44100 -ac 2 -vsync 1 -async 1  -flags low_delay -strict strict -avioflags direct -fflags +discardcorrupt -probesize 32 -analyzeduration 0 -movflags +faststart -bsf:v h264_mp4toannexb -c:v h264 -r 30 -g 60 -b:v 3500k -maxrate:v 3500k -minrate:v 3500k -f flv pipe:1 >> ffmpeg/vid2
 	}
 }

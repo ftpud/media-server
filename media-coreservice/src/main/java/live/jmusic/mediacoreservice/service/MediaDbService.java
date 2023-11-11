@@ -1,9 +1,9 @@
 package live.jmusic.mediacoreservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import live.jmusic.mediacoreservice.repository.InMemoryRepository;
+import live.jmusic.mediacoreservice.repository.RotationRepository;
 import live.jmusic.mediacoreservice.repository.MediaRepository;
-import live.jmusic.mediacoreservice.repository.model.MediaItem;
+import live.jmusic.shared.model.MediaItem;
 import live.jmusic.mediacoreservice.util.ProcessUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
@@ -26,7 +26,7 @@ public class MediaDbService {
     MediaRepository mediaRepository;
 
     @Autowired
-    InMemoryRepository inMemoryRepository;
+    RotationRepository inMemoryRepository;
 
     @Value("${media.library.path}")
     private String mediaLibraryPath;

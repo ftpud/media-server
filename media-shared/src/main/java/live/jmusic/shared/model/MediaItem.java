@@ -1,4 +1,4 @@
-package live.jmusic.mediacoreservice.repository.model;
+package live.jmusic.shared.model;
 
 import lombok.Data;
 

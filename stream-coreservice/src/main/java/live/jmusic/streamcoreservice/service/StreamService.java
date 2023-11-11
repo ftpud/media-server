@@ -1,9 +1,12 @@
 package live.jmusic.streamcoreservice.service;
 
+import live.jmusic.shared.model.RotationItem;
 import live.jmusic.shared.rest.RestClient;
+import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.streamcoreservice.model.TimedItem;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.jni.Proc;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -15,8 +18,8 @@ import java.io.InputStreamReader;
 @Slf4j
 public class StreamService {
 
-    @Value("${media.core.service.uri:http://localhost:8081}")
-    public String coreServiceUri;
+    @Autowired
+    RestRequestService restRequestService;
 
     @Value("${media.ffmpeg.stream.path:/home/ftpud/server/ffmpeg}")
     public String streamPath;
@@ -30,7 +33,7 @@ public class StreamService {
     public void run() {
         if (!System.getProperty("os.name").contains("Win")) {
             while (true) {
-                RestClient.recoverableRequest(coreServiceUri + "/media/now", TimedItem.class, this::runFfmpeg);
+                restRequestService.requestNow(i -> runFfmpeg(i));
             }
         }
     }
@@ -44,7 +47,7 @@ public class StreamService {
         }
     }
 
-    private void runFfmpeg(TimedItem currentItem) {
+    private void runFfmpeg(RotationItem currentItem) {
         try {
             log.info("Starting ffmpeg for {}", currentItem.getMediaItem().fullpath);
             //  String execCmd = String.format("%s/%s -ss \"%sms\" -re -i \"%s\" -b:a 256k -c:a aac -ar 44100 -ac 2 -vsync 1 -async 1  -flags low_delay -strict strict -avioflags direct -fflags +discardcorrupt -probesize 32 -analyzeduration 0 -movflags +faststart -bsf:v h264_mp4toannexb -c:v h264 -r 30 -g 60 -b:v 3500k -maxrate:v 3500k -minrate:v 3500k -f flv pipe:1 >> %s/input_pipe",
@@ -62,9 +65,9 @@ public class StreamService {
 
             ffmpegProcess = new ProcessBuilder(
                     streamPath + "/" + streamApp,
-                    "-hide_banner",
-                    "-loglevel",
-                    "quiet",
+                    // "-hide_banner",
+                    // "-loglevel",
+                    // "quiet",
                     "-ss",
                     String.format("%sms", currentItem.getCurrentTime()),
                     "-re",
@@ -116,7 +119,8 @@ public class StreamService {
                     "flv",
                     "pipe:1"
             ).directory(new File(streamPath))
-                    .redirectErrorStream(true)
+                    //.redirectErrorStream(true)
+                    .redirectError(new File("log-stream-ffmpeg.log"))
                     .redirectOutput(new File(streamPath + "/input_pipe"))
                     .start();
 
