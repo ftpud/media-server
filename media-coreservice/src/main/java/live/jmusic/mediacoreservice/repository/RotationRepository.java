@@ -29,6 +29,10 @@ public class RotationRepository {
         Collections.shuffle(rotationList);
     }
 
+    public void updateMediaItem(RotationItem source, MediaItem target) {
+        rotationList.set(source.getRotationPosition(), target);
+    }
+
     public RotationItem getItemForTime(Long time) {
         int passedTime = 0;
 

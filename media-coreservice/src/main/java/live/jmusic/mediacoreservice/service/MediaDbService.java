@@ -28,6 +28,9 @@ public class MediaDbService {
     @Autowired
     RotationRepository inMemoryRepository;
 
+    @Value("${media.volume.app}")
+    private String volumeApp;
+
     @Value("${media.library.path}")
     private String mediaLibraryPath;
     @Value("${media.ffprobe.path}")
@@ -50,7 +53,7 @@ public class MediaDbService {
         inMemoryRepository.updateMediaItemsList();
     }
 
-    private void processFile(File file) {
+    public void processFile(File file) {
         try {
             log.info("Processing {}", file.getAbsolutePath());
             var item = mediaRepository.findByFullpath(file.getAbsolutePath());
@@ -71,12 +74,28 @@ public class MediaDbService {
     }
 
     private void processMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
-       if(item.length == null) {
-           Long ms = getItemDuration(item);
-           item.setLength(ms);
-           log.info("Length set for {} to {}", item.fullpath, ms);
-       }
+        if (item.length == null) {
+            Long ms = getItemDuration(item);
+            item.setLength(ms);
+            log.info("Length set for {} to {}", item.fullpath, ms);
+        }
 
+        /* if (item.volume == null) {
+            String volume = getItemVolume(item);
+            item.setVolume(volume);
+            log.info("Volume set for {} to {}", item.fullpath, volume);
+        } */
+
+    }
+
+    public void processItemValue(MediaItem item) {
+        try {
+            String volume = getItemVolume(item);
+            item.setVolume(volume);
+            mediaRepository.save(item);
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
     }
 
     private Long getItemDuration(MediaItem item) throws IOException, InterruptedException, ParseException {
@@ -103,5 +122,24 @@ public class MediaDbService {
         }
 
         return 0L;
+    }
+
+
+    private String getItemVolume(MediaItem item) throws IOException, InterruptedException, ParseException {
+        final String volumeString = ProcessUtil.executeProcess(
+                "bash", "-c", volumeApp + " '" + item.fullpath.replace("'", "\\\\'") + "'"
+        );
+
+        try {
+            log.info(volumeApp + " '" + item.fullpath.replace("'", "\\'") + "'");
+            log.info(volumeString);
+
+            Float volume = Float.parseFloat(volumeString);
+            return volume.toString();
+        } catch (NullPointerException | NumberFormatException e) {
+            log.info(e.getMessage());
+        }
+
+        return null;
     }
 }

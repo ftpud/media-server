@@ -56,7 +56,7 @@ public class VideoFilterDrawTextBuilder {
     }
 
     public VideoFilterDrawTextBuilder withText(String text) {
-        filterList.add(String.format("text='%s'", text));
+        filterList.add(String.format("text='%s'", text.replaceAll("'","")));
         return this;
     }
 
