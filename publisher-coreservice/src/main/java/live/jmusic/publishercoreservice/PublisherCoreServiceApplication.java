@@ -15,7 +15,7 @@ import java.io.InputStreamReader;
 
 @Slf4j
 @SpringBootApplication
-@ComponentScan("live.jmusic.*")
+@ComponentScan(basePackages = {"live.jmusic.*"})
 public class PublisherCoreServiceApplication implements ApplicationRunner {
 
 	public static void main(String[] args) {

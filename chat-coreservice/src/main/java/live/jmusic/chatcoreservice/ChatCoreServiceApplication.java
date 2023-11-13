@@ -1,6 +1,6 @@
-package live.jmusic.livecoreservice;
+package live.jmusic.chatcoreservice;
 
-import live.jmusic.livecoreservice.service.LiveService;
+import live.jmusic.chatcoreservice.service.core.Sc2tvChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
@@ -8,24 +8,23 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
-import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 @Slf4j
 @SpringBootApplication
 @ComponentScan(basePackages = {"live.jmusic.*"})
-public class LiveCoreServiceApplication implements ApplicationRunner {
+public class ChatCoreServiceApplication implements ApplicationRunner {
 
     public static void main(String[] args) {
-        SpringApplication.run(LiveCoreServiceApplication.class, args);
+        SpringApplication.run(ChatCoreServiceApplication.class, args);
     }
 
 
     @Autowired
-    LiveService liveService;
+    Sc2tvChatService sc2tvChatService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        liveService.run();
+        sc2tvChatService.run();
     }
 
 }

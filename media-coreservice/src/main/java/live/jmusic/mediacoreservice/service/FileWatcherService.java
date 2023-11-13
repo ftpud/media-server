@@ -1,5 +1,6 @@
 package live.jmusic.mediacoreservice.service;
 
+import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.rest.RestRequestService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.monitor.FileAlterationListenerAdaptor;
@@ -68,8 +69,8 @@ public class FileWatcherService {
 
                                 if (file.exists()) {
                                     restRequestService.sendLiveMessage("Upload completed " + file.getName());
-                                    mediaDbService.processFile(file);
-
+                                    MediaItem item = mediaDbService.processFile(file);
+                                    mediaDbService.processItemVolume(item);
                                 } else {
                                     restRequestService.sendLiveMessage("Upload aborted " + file.getName());
                                 }

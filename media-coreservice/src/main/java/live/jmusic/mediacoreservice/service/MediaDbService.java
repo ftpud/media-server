@@ -53,7 +53,7 @@ public class MediaDbService {
         inMemoryRepository.updateMediaItemsList();
     }
 
-    public void processFile(File file) {
+    public MediaItem processFile(File file) {
         try {
             log.info("Processing {}", file.getAbsolutePath());
             var item = mediaRepository.findByFullpath(file.getAbsolutePath());
@@ -64,13 +64,17 @@ public class MediaDbService {
                 mediaItem.setTitle(file.getName().replaceFirst("[.][^.]+$", ""));
                 processMediaItem(mediaItem);
                 mediaRepository.save(mediaItem);
+                return mediaItem;
             } else {
                 processMediaItem(item.get());
                 mediaRepository.save(item.get());
+                return item.get();
             }
         } catch (Exception e) {
             log.error(e.toString());
         }
+        return null;
+
     }
 
     private void processMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
@@ -88,7 +92,7 @@ public class MediaDbService {
 
     }
 
-    public void processItemValue(MediaItem item) {
+    public void processItemVolume(MediaItem item) {
         try {
             String volume = getItemVolume(item);
             item.setVolume(volume);
@@ -101,7 +105,7 @@ public class MediaDbService {
     private Long getItemDuration(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String json;
         json = ProcessUtil.executeProcess(
-                ffprobePath, // -v quiet -print_format json -show_format -i '%s'
+                ffprobePath,
                 "-v", "quiet",
                 "-print_format", "json",
                 "-show_entries",

@@ -1,9 +1,12 @@
 package live.jmusic.shared.rest;
 
+import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.model.RotationItem;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 @Service
@@ -25,6 +28,18 @@ public class RestRequestService {
 
     public void requestNow(Consumer<RotationItem> onSuccess) {
         RestClient.recoverableRequest(coreServiceUri + "/media/now", RotationItem.class, onSuccess);
+    }
+
+    public void requestEnqueue(String item, Consumer<MediaItem> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + "/media/enqueue/" + item, MediaItem.class, onSuccess);
+    }
+
+    public void requestSearch(String item, Consumer<MediaItem[]> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + "/media/search/" + item, MediaItem[].class, onSuccess);
+    }
+
+    public void requestNext(Consumer<RotationItem> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + "/media/next", RotationItem.class, onSuccess);
     }
 
     public void sendLiveMessage(String slot, String message) {

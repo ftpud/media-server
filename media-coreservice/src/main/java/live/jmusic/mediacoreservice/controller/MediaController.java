@@ -6,7 +6,6 @@ import live.jmusic.mediacoreservice.repository.RotationRepository;
 import live.jmusic.mediacoreservice.repository.MediaRepository;
 import live.jmusic.shared.model.MediaItem;
 import live.jmusic.mediacoreservice.service.ChronoService;
-import live.jmusic.shared.rest.RestClient;
 import live.jmusic.shared.rest.RestRequestService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.LevenshteinDistance;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -45,7 +43,7 @@ public class MediaController {
     public String fixVolume(@PathVariable("id") Long id) {
         Optional<MediaItem> item = mediaRepository.findById(id);
         if (item.isPresent()) {
-            mediaDbService.processItemValue(item.get());
+            mediaDbService.processItemVolume(item.get());
             RotationItem currentItem = rotationRepository.getItemForTime(ChronoService.getTimePointer());
             if (currentItem.getMediaItem().fullpath.equals(item.get().fullpath)) {
                 //currentItem.setMediaItem(item.get());
@@ -84,7 +82,7 @@ public class MediaController {
 
     @GetMapping("/search/{item}")
     public List<MediaItem> search(@PathVariable("item") String item) {
-        return searchAll(item, 15);
+        return searchAll(item, 30);
     }
 
     @GetMapping("/enqueue/{item}")

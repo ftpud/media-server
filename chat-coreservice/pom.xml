@@ -9,9 +9,9 @@
 		<version>1.0-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>publisher-coreservice</artifactId>
+	<artifactId>chat-coreservice</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>publisher-coreservice</name>
+	<name>chat-coreservice</name>
 	<description>publisher</description>
 
 	<properties>
@@ -24,6 +24,17 @@
 			<artifactId>media-shared</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
-	</dependencies>
 
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-websocket</artifactId>
+			<version>5.2.2.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-messaging</artifactId>
+			<version>5.2.2.RELEASE</version>
+		</dependency>
+
+	</dependencies>
 </project>
