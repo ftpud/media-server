@@ -24,12 +24,12 @@
 
     <modules>
         <module>media-shared</module>
-        <module>balance-coreservice</module>
-        <module>media-coreservice</module>
-        <module>stream-coreservice</module>
-        <module>publisher-coreservice</module>
-        <module>live-coreservice</module>
-        <module>chat-coreservice</module>
+        <module>balance-service</module>
+        <module>media-service</module>
+        <module>stream-service</module>
+        <module>publisher-service</module>
+        <module>live-service</module>
+        <module>chat-service</module>
     </modules>
 
     <dependencies>
@@ -98,7 +98,7 @@
                         <configuration>
                             <target>
                                 <copy file="target/${project.artifactId}-${project.version}.jar"
-                                      tofile="//wsl.localhost/Ubuntu/home/ftpud/server/deploy/${project.artifactId}.jar"/>
+                                      tofile="//wsl.localhost/Ubuntu/home/ftpud/server/new/${project.artifactId}.jar"/>
                             </target>
                         </configuration>
                         <goals>
