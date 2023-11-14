@@ -6,6 +6,8 @@ import live.jmusic.mediaservice.service.ChronoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,12 +45,18 @@ public class RotationRepository {
                 rotationItem.setCurrentTime(time - passedTime);
                 rotationItem.setTimeLeft(rotationList.get(i).length - (time - passedTime));
                 rotationItem.setRotationPosition(i);
-                return rotationItem;
+
+                if((new File(rotationItem.getMediaItem().fullpath)).exists()) {
+                    return rotationItem;
+                } else {
+                    rotationList.get(i).setLength(0L);
+                }
             }
-            passedTime += rotationList.get(i).length;
+            passedTime += rotationList.get(i).getLength();
         }
 
-        throw new RuntimeException("Too much time");
+        ChronoService.resetTime();
+        return getItemForTime(0L);
     }
 
 

@@ -10,6 +10,7 @@ public class ChronoService {
     private static LocalDateTime startTime = LocalDateTime.now();
 
     private static long offset = 0;
+
     public static void pushOffset(long num) {
         offset += num;
     }
@@ -18,4 +19,8 @@ public class ChronoService {
         return offset + ChronoUnit.MILLIS.between(startTime, LocalDateTime.now());
     }
 
+    public static void resetTime() {
+        startTime = LocalDateTime.now();
+        offset = 0;
+    }
 }
