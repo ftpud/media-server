@@ -1,4 +1,4 @@
-package live.jmusic.streamservice.util;
+package live.jmusic.streamservice.util.videofilter;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,7 +1,10 @@
-package live.jmusic.streamservice.util;
+package live.jmusic.streamservice.util.videofilter;
+
+import live.jmusic.streamservice.util.SubtitlesHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class VideoFilterBuilder {
@@ -25,16 +28,17 @@ public class VideoFilterBuilder {
     }
 
 
-    //public VideoFilterBuilder withDrawText(String text, int fontsize, int x, int y) {
-    //    filterList.add(
-    //            String.format("drawtext=text='%s':fontcolor=white@0.8:fontfile=/usr/share/fonts/truetype/wqy/wqy-microhei.ttc:fontsize=%s:x=%s:y=%s:box=1:boxcolor=black@0.4:boxborderw=4", text, fontsize, x, y));
-    //    return this;
-    //}
-
     public VideoFilterDrawTextBuilder withDrawText() {
         return new VideoFilterDrawTextBuilder(this);
     }
 
+    public VideoFilterBuilder withSubtitles(String filename) {
+        Optional<String> subtitleFilter = SubtitlesHelper.getSubtitlesVideoFilter(filename);
+        if (subtitleFilter.isPresent()) {
+            filterList.add(subtitleFilter.get());
+        }
+        return this;
+    }
 
     void putCustomString(String string) {
         filterList.add(string);
