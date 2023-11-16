@@ -1,7 +1,5 @@
 package live.jmusic.streamservice.util.videofilter;
 
-import live.jmusic.streamservice.util.SubtitlesHelper;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -32,10 +30,9 @@ public class VideoFilterBuilder {
         return new VideoFilterDrawTextBuilder(this);
     }
 
-    public VideoFilterBuilder withSubtitles(String filename) {
-        Optional<String> subtitleFilter = SubtitlesHelper.getSubtitlesVideoFilter(filename);
-        if (subtitleFilter.isPresent()) {
-            filterList.add(subtitleFilter.get());
+    public VideoFilterBuilder withSubtitles(Optional<String> subtitlesFilter) {
+        if (subtitlesFilter.isPresent()) {
+            filterList.add(subtitlesFilter.get());
         }
         return this;
     }

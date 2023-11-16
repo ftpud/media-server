@@ -3,9 +3,11 @@ package live.jmusic.streamservice.util;
 import live.jmusic.shared.model.RotationItem;
 import live.jmusic.streamservice.util.videofilter.VideoFilterBuilder;
 
+import java.util.Optional;
+
 public class FfmpegHelper {
 
-    public static String buildVideoFilter(RotationItem currentItem) {
+    public static String buildVideoFilter(RotationItem currentItem, Optional<String> subtitlesFilter) {
         return VideoFilterBuilder.create()
                 .withScale(1920, 1080)
                 .withPad(1920, 1080)
@@ -30,7 +32,7 @@ public class FfmpegHelper {
                 .withReload(1)
                 .buildDrawText()
 
-                .withSubtitles(currentItem.getMediaItem().fullpath)
+                .withSubtitles(subtitlesFilter)
 
                 .build();
     }

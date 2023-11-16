@@ -38,6 +38,10 @@ public class RestRequestService {
         RestClient.recoverableRequest(coreServiceUri + "/media/search/" + item, MediaItem[].class, onSuccess);
     }
 
+    public void requestSeek(String time, Consumer<String> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + "/media/seek/" + time, String.class, onSuccess);
+    }
+
     public void requestNext(Consumer<RotationItem> onSuccess) {
         RestClient.recoverableRequest(coreServiceUri + "/media/next", RotationItem.class, onSuccess);
     }

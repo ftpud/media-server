@@ -15,10 +15,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,25 @@ public class MediaController {
 
     @Autowired
     MediaDbService mediaDbService;
+
+    @GetMapping("/seek/{time}")
+    public String seek(@PathVariable String time) {
+        if (time.matches("[0-9][0-9]:[0-9][0-9]")) {
+            time = "00:" + time;
+        }
+
+        try {
+            LocalTime t = LocalTime.parse(time);
+            Long fwdTime = t.toSecondOfDay() * 1000L;
+            RotationItem item = rotationRepository.getItemForTime(ChronoService.getTimePointer());
+            ChronoService.pushOffset(-item.currentTime + fwdTime);
+            restRequestService.requestRestart();
+            return "ok";
+        } catch (Exception e) {
+            log.info(e.toString());
+            return "err";
+        }
+    }
 
     @GetMapping("/fixVolume/{id}")
     public String fixVolume(@PathVariable("id") Long id) {

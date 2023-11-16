@@ -4,6 +4,7 @@ import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.model.RotationItem;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.streamservice.util.FfmpegHelper;
+import live.jmusic.streamservice.util.SubtitlesService;
 import live.jmusic.streamservice.util.videofilter.VideoFilterBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 
@@ -21,6 +23,9 @@ public class StreamService {
 
     @Autowired
     RestRequestService restRequestService;
+
+    @Autowired
+    SubtitlesService subtitlesService;
 
     @Value("${media.ffmpeg.stream.path:/home/ftpud/server/ffmpeg}")
     public String streamPath;
@@ -55,17 +60,21 @@ public class StreamService {
 
             ProcessBuilder processBuilder;
 
-            String vf = FfmpegHelper.buildVideoFilter(currentItem);
+            Optional<String> subtitlesFilter = subtitlesService.buildSubtitles(currentItem);
+
+            String vf = FfmpegHelper.buildVideoFilter(currentItem, subtitlesFilter);
             String volume = getAudioFilter(currentItem.getMediaItem());
             restRequestService.sendLiveMessage("Loaded with: " + volume);
 
 
             if ("prod".equals(profile)) {
                 processBuilder = new ProcessBuilder(FfmpegHelper.getFfmpegProdCommand(
-                        streamPath + "/" + streamApp, currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
+                        streamPath + "/" + streamApp,
+                        currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
             } else {
                 processBuilder = new ProcessBuilder(FfmpegHelper.getFfmpegPreProdCommand(
-                        streamPath + "/" + streamApp, currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
+                        streamPath + "/" + streamApp,
+                        currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
             }
 
             ffmpegProcess = processBuilder.directory(new File(streamPath))

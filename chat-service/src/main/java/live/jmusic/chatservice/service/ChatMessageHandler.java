@@ -19,6 +19,8 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         registerEvent("^@next$", r -> next(), this::isModerator);
         registerEvent("^@play (.+)$", r -> play(r.group(1)), this::isModerator);
         registerEvent("^@search (.+)$", r -> search(r.group(1)), this::isModerator);
+        registerEvent("^@seek ([0-9]?[0-9]:[0-9][0-9])$", r -> seek(r.group(1)), this::isModerator);
+        registerEvent("^@seek ([0-9]?[0-9]:[0-9][0-9]:[0-9][0-9])$", r -> seek(r.group(1)), this::isModerator);
     }
 
     private void search(String item) {
@@ -26,6 +28,12 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         {
             String foundText = Arrays.stream(i).map(found -> found.getTitle()).collect(Collectors.joining("\n"));
             restRequestService.sendLiveMessage(foundText);
+        });
+    }
+
+    private void seek(String time) {
+        restRequestService.requestSeek(time, i -> {
+            restRequestService.sendLiveMessage(i);
         });
     }
 
