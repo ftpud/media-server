@@ -3,10 +3,12 @@ package live.jmusic.shared.rest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -15,6 +17,10 @@ import java.util.function.Supplier;
 public class RestClient {
 
     private static RestTemplate recoverableRestTemplate = new RestTemplate();
+    static {
+        recoverableRestTemplate.getMessageConverters()
+                .add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
+    }
 
     public static <T> void recoverablePostRequest(String url, String postBody, Class<T> clazz, Consumer<T> onSuccess) {
         log.info("Requesting POST " + url);

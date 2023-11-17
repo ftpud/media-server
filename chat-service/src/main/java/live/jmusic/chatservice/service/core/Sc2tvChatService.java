@@ -12,7 +12,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 @Service
 public class Sc2tvChatService {
 
-    @Value("${media.chat.sc2tv.ws.url:wss://chat.sc2tv.ru/?EIO=3&transport=websocket}")
+    @Value("${media.chat.sc2tv.ws.url}")
     String sc2tvUrl;
 
     @Autowired

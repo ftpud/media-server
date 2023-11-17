@@ -3,6 +3,7 @@ package live.jmusic.shared.rest;
 import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.model.RotationItem;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ public class RestRequestService {
     @Value("${media.stream.service.url:http://localhost:8088}")
     private String streamServiceUrl;
 
-    @Value("${media.core.service.uri:http://localhost:8081}")
+    @Value("${media.core.service.uri:http://localhost:8084}")
     public String coreServiceUri;
 
     @Value("${media.live.service.uri:http://localhost:8089}")

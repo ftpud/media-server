@@ -1,8 +1,7 @@
 package live.jmusic.liveservice;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -15,13 +14,22 @@ public class Util {
 
         // Generate a random string of size 32 for the tmp file.
         SecureRandom random = new SecureRandom();
-        String tmp_name = "temp_live";//new BigInteger(130, random).toString(32);
+        String tmp_name = new BigInteger(130, random).toString(32);
         String tmp_path = dir + "/" + tmp_name;
 
-        PrintWriter pw = new PrintWriter(tmp_path);
-        pw.write(input);
-        pw.close();
+
+        writeUnicode(tmp_path, input);
+
         Files.move(Paths.get(tmp_path), Paths.get(f), StandardCopyOption.ATOMIC_MOVE);
     }
 
+    public static void writeUnicode(String fileName, String lines) {
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter(fileName));
+            writer.write(lines);
+            writer.close();
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+    }
 }

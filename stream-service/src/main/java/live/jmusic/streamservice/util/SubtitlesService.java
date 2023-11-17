@@ -18,10 +18,10 @@ import java.util.*;
 @Service
 public class SubtitlesService {
 
-    @Value("${media.ffmpeg.stream.path:/home/ftpud/server/ffmpeg}")
+    @Value("${media.ffmpeg.stream.path}")
     public String streamPath;
 
-    @Value("${media.ffmpeg.stream.app:ffmpeg}")
+    @Value("${media.ffmpeg.stream.app}")
     public String streamApp;
 
     private Map<String, String> supportedSubtitles;

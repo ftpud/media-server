@@ -33,8 +33,9 @@ public class MediaDbService {
 
     @Value("${media.library.path}")
     private String mediaLibraryPath;
-    @Value("${media.ffprobe.path}")
-    private String ffprobePath;
+
+    @Value("${media.ffprobe.app}")
+    private String ffprobeApp;
 
     @Value("${media.library.supported.ext}")
     private String[] supportedExtensions;
@@ -105,7 +106,7 @@ public class MediaDbService {
     private Long getItemDuration(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String json;
         json = ProcessUtil.executeProcess(
-                ffprobePath,
+                ffprobeApp,
                 "-v", "quiet",
                 "-print_format", "json",
                 "-show_entries",
@@ -131,17 +132,17 @@ public class MediaDbService {
 
     private String getItemVolume(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String volumeString = ProcessUtil.executeProcess(
-                "bash", "-c", volumeApp + " '" + item.fullpath.replace("'", "\\\\'") + "'"
+                volumeApp, item.fullpath
         );
 
         try {
-            log.info(volumeApp + " '" + item.fullpath.replace("'", "\\'") + "'");
+            log.info(volumeApp + " " + item.fullpath);
             log.info(volumeString);
 
             Float volume = Float.parseFloat(volumeString);
             return volume.toString();
         } catch (NullPointerException | NumberFormatException e) {
-            log.info(e.getMessage());
+            log.info(e.toString());
         }
 
         return null;

@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.apache.logging.log4j.util.Strings.isNotEmpty;
 
@@ -27,13 +29,13 @@ public class StreamService {
     @Autowired
     SubtitlesService subtitlesService;
 
-    @Value("${media.ffmpeg.stream.path:/home/ftpud/server/ffmpeg}")
+    @Value("${media.ffmpeg.stream.path}")
     public String streamPath;
 
-    @Value("${media.ffmpeg.stream.app:ffmpeg}")
+    @Value("${media.ffmpeg.stream.app}")
     public String streamApp;
 
-    @Value("${profile:dev}")
+    @Value("${media.profile}")
     public String profile;
 
 
@@ -68,17 +70,22 @@ public class StreamService {
 
 
             if ("prod".equals(profile)) {
-                processBuilder = new ProcessBuilder(FfmpegHelper.getFfmpegProdCommand(
+                String[] cmd = FfmpegHelper.getFfmpegProdCommand(
                         streamPath + "/" + streamApp,
-                        currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
+                        currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume);
+                processBuilder = new ProcessBuilder(cmd);
+
+                log.info(Arrays.stream(cmd).collect(Collectors.joining(" ")));
             } else {
                 processBuilder = new ProcessBuilder(FfmpegHelper.getFfmpegPreProdCommand(
                         streamPath + "/" + streamApp,
                         currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
+
+
             }
 
             ffmpegProcess = processBuilder.directory(new File(streamPath))
-                    .redirectError(new File("logs/log-stream-ffmpeg.log"))
+                    .redirectError(new File("log-stream-ffmpeg.log"))
                     .redirectOutput(new File(streamPath + "/input_pipe"))
                     .start();
 

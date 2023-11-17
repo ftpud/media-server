@@ -25,6 +25,8 @@ public class ProcessUtil {
             }
 
             process.waitFor();
+        } catch (Exception e) {
+            System.out.println(e);
         }
 
         return processOutput.toString().trim();

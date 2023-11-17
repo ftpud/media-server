@@ -15,12 +15,18 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
 
     public ChatMessageHandler(RestRequestService restRequestService) {
         this.restRequestService = restRequestService;
-        registerEvent("^@q (.+)$", r -> enqueue(r.group(1)), this::isModerator);
-        registerEvent("^@next$", r -> next(), this::isModerator);
-        registerEvent("^@play (.+)$", r -> play(r.group(1)), this::isModerator);
-        registerEvent("^@search (.+)$", r -> search(r.group(1)), this::isModerator);
-        registerEvent("^@seek ([0-9]?[0-9]:[0-9][0-9])$", r -> seek(r.group(1)), this::isModerator);
-        registerEvent("^@seek ([0-9]?[0-9]:[0-9][0-9]:[0-9][0-9])$", r -> seek(r.group(1)), this::isModerator);
+        registerEvent("^!q (.+)$",
+                r -> enqueue(r.group(1)), this::isModerator);
+        registerEvent("^!next$",
+                r -> next(), this::isModerator);
+        registerEvent("^!play (.+)$",
+                r -> play(r.group(1)), this::isModerator);
+        registerEvent("^!search (.+)$",
+                r -> search(r.group(1)), this::isModerator);
+        registerEvent("^!time ([0-9]?[0-9]:[0-9][0-9])$",
+                r -> seek(r.group(1)), this::isModerator);
+        registerEvent("^!time ([0-9]?[0-9]:[0-9][0-9]:[0-9][0-9])$",
+                r -> seek(r.group(1)), this::isModerator);
     }
 
     private void search(String item) {

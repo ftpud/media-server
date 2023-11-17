@@ -47,18 +47,24 @@ public class LiveService {
             while (true) {
                 Thread.sleep(1000);
                 String newLive = "";
-                for (int i = 0; i < messages.size(); i++) {
+                int size = messages.size();
+
+                for (int i = 0; i < size; i++) {
                     LiveMessage m = messages.get(i);
                     m.setTimeout(m.getTimeout() - 1);
-                    if (m.getTimeout() < 0) {
-                        messages.remove(m);
-                    }
                     newLive += m.getText().replace("%", "\\%") + "\n";
+                }
 
+                for (int i = 0; i < messages.size(); i++) {
+                    LiveMessage m = messages.get(i);
+                    if (m.getTimeout() < 0) {
+                        messages.remove(i);
+                        i--;
+                    }
                 }
 
                 if (newLive.isEmpty()) {
-                    newLive = " ";
+                    newLive = "_";
                 } else if (newLive.endsWith("\n")) {
                     newLive = newLive.substring(0, newLive.length() - 1);
                 }
