@@ -64,7 +64,7 @@ public class LiveService {
                 }
 
                 if (newLive.isEmpty()) {
-                    newLive = "_";
+                    newLive = " ";
                 } else if (newLive.endsWith("\n")) {
                     newLive = newLive.substring(0, newLive.length() - 1);
                 }

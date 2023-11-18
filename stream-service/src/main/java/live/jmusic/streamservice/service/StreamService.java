@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -60,6 +62,8 @@ public class StreamService {
         try {
             log.info("Starting ffmpeg for {}", currentItem.getMediaItem().fullpath);
 
+            detectAbnormality(currentItem.getMediaItem().fullpath);
+
             ProcessBuilder processBuilder;
 
             Optional<String> subtitlesFilter = subtitlesService.buildSubtitles(currentItem);
@@ -92,12 +96,43 @@ public class StreamService {
             try {
                 ffmpegProcess.waitFor();
 
+                if (ffmpegProcess.exitValue() != 0) {
+                    log.info("Abnormal ffmpeg termination {}", ffmpegProcess.exitValue());
+                    // restRequestService.requestNext(x -> {});
+                }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         } catch (IOException e) {
             //throw new RuntimeException(e);
         }
+    }
+
+    LocalDateTime lastInvoke;
+    int invokeCount=0;
+    String lastInvokeItem;
+
+    void detectAbnormality(String lastItem) {
+        if(lastItem.equals(lastInvokeItem)){
+            long diff = ChronoUnit.SECONDS.between(lastInvoke, LocalDateTime.now());
+            if(diff <= 2) {
+                log.info("Abnormal invoke for {}", lastItem);
+                invokeCount++;
+            } else {
+                invokeCount = 0;
+            }
+            if (invokeCount >= 5) {
+                log.info("Abnormality detected {}", ffmpegProcess.exitValue());
+                restRequestService.requestNext(x -> {});
+            }
+            lastInvoke = LocalDateTime.now();
+        } else {
+            log.info("First invoke for {}", lastItem);
+            lastInvoke = LocalDateTime.now();
+            invokeCount=0;
+            lastInvokeItem=lastItem;
+        }
+
     }
 
     private String getAudioFilter(MediaItem item) {

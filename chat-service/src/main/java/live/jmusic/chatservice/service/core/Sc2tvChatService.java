@@ -2,6 +2,7 @@ package live.jmusic.chatservice.service.core;
 
 import live.jmusic.chatservice.service.ChatMessageHandler;
 import live.jmusic.shared.rest.RestRequestService;
+import live.jmusic.shared.util.ConsoleUtilService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,12 +19,17 @@ public class Sc2tvChatService {
     @Autowired
     RestRequestService restRequestService;
 
+    @Autowired
+    ConsoleUtilService consoleUtilService;
+
     public void run() {
         StandardWebSocketClient client = new StandardWebSocketClient();
 
         while (true) {
             log.info("Connecting to {}", sc2tvUrl);
-            Sc2tvWebsocketHandler handler = new Sc2tvWebsocketHandler(new ChatMessageHandler(restRequestService));
+            Sc2tvWebsocketHandler handler = new Sc2tvWebsocketHandler(
+                    new ChatMessageHandler(restRequestService, consoleUtilService)
+            );
             client.doHandshake(handler, sc2tvUrl);
 
             while (handler.isAlive) {

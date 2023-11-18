@@ -2,6 +2,10 @@ package live.jmusic;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -47,4 +51,13 @@ public class RegexTest {
         System.out.println(m.group(1));
         System.out.println(m.group(2));
     }
+
+    @Test
+    public void attrTest() throws Exception {
+       BasicFileAttributes attr = Files.readAttributes((new File("C:\\Users\\bober\\Downloads\\big_file.mp4")).toPath(), BasicFileAttributes.class);
+        System.out.println("");
+        FileTime s = attr.lastModifiedTime();
+       System.out.println("sdf");
+    }
 }
+

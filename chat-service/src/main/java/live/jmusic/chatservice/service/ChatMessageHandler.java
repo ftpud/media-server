@@ -1,32 +1,44 @@
 package live.jmusic.chatservice.service;
 
 import live.jmusic.shared.rest.RestRequestService;
+import live.jmusic.shared.util.ConsoleUtilService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 @Slf4j
-@Service
 public class ChatMessageHandler extends ChatMessageHandlerBase {
+
+    ConsoleUtilService consoleUtilService;
 
     RestRequestService restRequestService;
 
-    public ChatMessageHandler(RestRequestService restRequestService) {
+    public ChatMessageHandler(RestRequestService restRequestService, ConsoleUtilService consoleUtilService) {
+        this.consoleUtilService = consoleUtilService;
         this.restRequestService = restRequestService;
         registerEvent("^!q (.+)$",
-                r -> enqueue(r.group(1)), this::isModerator);
+                r -> enqueue(r.group(1)), this::everyone);
         registerEvent("^!next$",
-                r -> next(), this::isModerator);
+                r -> next(), this::everyone);
         registerEvent("^!play (.+)$",
-                r -> play(r.group(1)), this::isModerator);
+                r -> play(r.group(1)), this::everyone);
         registerEvent("^!search (.+)$",
-                r -> search(r.group(1)), this::isModerator);
+                r -> search(r.group(1)), this::everyone);
         registerEvent("^!time ([0-9]?[0-9]:[0-9][0-9])$",
-                r -> seek(r.group(1)), this::isModerator);
+                r -> seek(r.group(1)), this::everyone);
         registerEvent("^!time ([0-9]?[0-9]:[0-9][0-9]:[0-9][0-9])$",
-                r -> seek(r.group(1)), this::isModerator);
+                r -> seek(r.group(1)), this::everyone);
+
+        registerEvent("^!youtube-dl ([^ ]+?) (.+)$",
+                r -> {
+                    log.info(r.group(1));
+                    log.info(r.group(2));
+
+                    consoleUtilService.youtubeDl(r.group(1), r.group(2), restRequestService);
+                }, this::isModerator);
     }
 
     private void search(String item) {
@@ -77,6 +89,10 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
     }
 
     public Boolean isModerator(String sender) {
+        return Arrays.asList("bober12", "tdsfog", "Акимотыч").contains(sender);
+    }
+
+    public Boolean everyone(String sender) {
         return true;
     }
 }

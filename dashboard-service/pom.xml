@@ -3,24 +3,52 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>live.jmusic</groupId>
-        <artifactId>media-parent</artifactId>
-        <version>1.0-SNAPSHOT</version>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.17</version>
+        <relativePath/> <!-- lookup parent from repository -->
     </parent>
-
-    <artifactId>balance-service</artifactId>
+    <groupId>live.jmusic</groupId>
+    <artifactId>dashboard-service</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>balance-service</name>
-    <description>balance service</description>
+    <name>dashboard-service</name>
+    <description>msdashboardrv2</description>
     <properties>
         <java.version>11</java.version>
-        <skip.deployment>false</skip.deployment>
+        <sftp.server.id>sftp-server</sftp.server.id>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
 
     <build>
         <finalName>${project.artifactId}</finalName>
+
         <plugins>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
             <!-- Maven Deploy Plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -54,5 +82,12 @@
             </plugin>
         </plugins>
     </build>
+
+ <!--   <distributionManagement>
+        <repository>
+            <id>ssh-repository</id>
+            <url>scp://192.168.0.129/media-server/app/</url>
+        </repository>
+    </distributionManagement> -->
 
 </project>

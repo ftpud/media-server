@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Dark Dashboard</title>
+    <!-- Include Material Design CSS -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.blue_grey-amber.min.css">
+    <!-- Include jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- Include Material Design JS -->
+    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <!-- Include custom script -->
+    <script defer src="script.js"></script>
+    <style>
+        #logPopup {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #263238; /* Updated background color */
+            color: white; /* White text color */
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        #logPopupContent {
+            margin: 20px;
+        }
+    </style>
+</head>
+<body class="mdl-color--blue-grey-900">
+
+<div class="mdl-grid">
+    <div class="mdl-cell mdl-cell--12-col">
+        <!-- Service Blocks will be appended here -->
+        <div id="serviceBlocks" class="mdl-grid"></div>
+    </div>
+</div>
+
+<!-- Popup block for viewing logs -->
+<div id="logPopup">
+    <div id="logPopupContent">
+        <div class="mdl-dialog__content" id="logContent"></div>
+        <div class="mdl-dialog__actions">
+            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" onclick="closeLogPopup()">Close</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

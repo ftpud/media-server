@@ -14,6 +14,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -31,6 +32,21 @@ public class FileWatcherService {
     @Autowired
     MediaDbService mediaDbService;
 
+    public static void isFileReady(File entry, BiConsumer<File, Integer> inProgress) {
+        try {
+            int i = 0;
+            Long lastAccess = 0L;
+            while (lastAccess != Files.readAttributes(entry.toPath(), BasicFileAttributes.class).lastModifiedTime().toMillis()) {
+                lastAccess = Files.readAttributes(entry.toPath(), BasicFileAttributes.class).lastModifiedTime().toMillis();
+                Thread.sleep(5000);
+                inProgress.accept(entry, i);
+                i++;
+            }
+
+        } catch (Exception e) {
+            log.info(e.toString());
+        }
+    }
 
     private void waitUntilIsReadable(File file, BiConsumer<File, Integer> inProgress) throws InterruptedException {
         boolean isReadable = false;
@@ -63,19 +79,19 @@ public class FileWatcherService {
                         () -> {
                             try {
                                 restRequestService.sendLiveMessage("Upload started: " + file.getName());
-                                waitUntilIsReadable(file,
+                                isFileReady(file,
                                         (s, t) -> restRequestService.sendLiveMessage(
                                                 s.getName(), String.format("Uploading [%s] %s", s.getName(), t)));
 
                                 if (file.exists()) {
                                     restRequestService.sendLiveMessage("Upload completed " + file.getName());
-                                    MediaItem item = mediaDbService.processFile(file);
+                                    MediaItem item = mediaDbService.processFile(file, true);
                                     mediaDbService.processItemVolume(item);
                                 } else {
                                     restRequestService.sendLiveMessage("Upload aborted " + file.getName());
                                 }
                                 return true;
-                            } catch (InterruptedException e) {
+                            } catch (Exception e) {
                                 throw new RuntimeException(e);
                             }
                         }

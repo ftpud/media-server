@@ -25,4 +25,41 @@
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<!-- Maven Deploy Plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>3.0.0-M1</version>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
+			<!-- Maven Wagon SSH Plugin -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>wagon-maven-plugin</artifactId>
+				<version>2.0.2</version>
+				<executions>
+					<execution>
+						<id>upload-artifact</id>
+						<phase>install</phase>
+						<goals>
+							<goal>upload</goal>
+						</goals>
+						<configuration>
+							<serverId>ssh-repository</serverId>
+							<url>scp://192.168.0.129/home/ftpud/media-server/deploy/</url>
+							<fromDir>${project.build.directory}</fromDir>
+							<includes>*.jar</includes>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 </project>

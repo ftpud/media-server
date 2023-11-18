@@ -5,18 +5,28 @@ import live.jmusic.mediaservice.repository.RotationRepository;
 import live.jmusic.mediaservice.repository.MediaRepository;
 import live.jmusic.shared.model.MediaItem;
 import live.jmusic.mediaservice.util.ProcessUtil;
+import live.jmusic.shared.rest.RestRequestService;
 import lombok.extern.slf4j.Slf4j;
+import net.bramp.ffmpeg.FFmpeg;
+import net.bramp.ffmpeg.FFmpegExecutor;
+import net.bramp.ffmpeg.builder.FFmpegBuilder;
+import net.bramp.ffmpeg.progress.Progress;
+import net.bramp.ffmpeg.progress.ProgressListener;
 import org.apache.commons.io.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Duration;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -28,6 +38,9 @@ public class MediaDbService {
     @Autowired
     RotationRepository inMemoryRepository;
 
+    @Autowired
+    RestRequestService restRequestService;
+
     @Value("${media.volume.app}")
     private String volumeApp;
 
@@ -36,6 +49,9 @@ public class MediaDbService {
 
     @Value("${media.ffprobe.app}")
     private String ffprobeApp;
+
+    @Value("${media.ffmpeg.app}")
+    private String ffmpegApp;
 
     @Value("${media.library.supported.ext}")
     private String[] supportedExtensions;
@@ -47,14 +63,14 @@ public class MediaDbService {
 
 
         FileUtils.listFiles(new File(mediaLibraryPath), supportedExtensions, true).forEach(
-                this::processFile
+                f -> processFile(f, false)
         );
 
         log.info("All files processed");
         inMemoryRepository.updateMediaItemsList();
     }
 
-    public MediaItem processFile(File file) {
+    public MediaItem processFile(File file, boolean full) {
         try {
             log.info("Processing {}", file.getAbsolutePath());
             var item = mediaRepository.findByFullpath(file.getAbsolutePath());
@@ -63,11 +79,19 @@ public class MediaDbService {
                 MediaItem mediaItem = new MediaItem();
                 mediaItem.setFullpath(file.getAbsolutePath());
                 mediaItem.setTitle(file.getName().replaceFirst("[.][^.]+$", ""));
-                processMediaItem(mediaItem);
+                if (full) {
+                    fullProcessMediaItem(mediaItem);
+                } else {
+                    processMediaItem(mediaItem);
+                }
                 mediaRepository.save(mediaItem);
                 return mediaItem;
             } else {
-                processMediaItem(item.get());
+                if (full) {
+                    fullProcessMediaItem(item.get());
+                } else {
+                    processMediaItem(item.get());
+                }
                 mediaRepository.save(item.get());
                 return item.get();
             }
@@ -78,9 +102,20 @@ public class MediaDbService {
 
     }
 
+    public void startFullProcessing() {
+        CompletableFuture f = CompletableFuture.runAsync(() -> {
+            mediaRepository.findAll().forEach(i -> {
+                File file = new File(i.fullpath);
+                if (file.exists()) {
+                    processFile(file, true);
+                }
+            });
+        });
+    }
+
     private void processMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
         if (item.length == null) {
-            Long ms = getItemDuration(item);
+            Long ms = getVideoDuration(item.getFullpath());
             item.setLength(ms);
             log.info("Length set for {} to {}", item.fullpath, ms);
         }
@@ -90,6 +125,23 @@ public class MediaDbService {
             item.setVolume(volume);
             log.info("Volume set for {} to {}", item.fullpath, volume);
         } */
+
+    }
+
+    public void fullProcessMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
+        //if (item.length == null) {
+        Long ms = getVideoDuration(item.getFullpath());
+        item.setLength(ms);
+        log.info("Length set for {} to {}", item.fullpath, ms);
+        restRequestService.sendLiveMessage(String.format("%s length set to %s", item.getTitle(), ms / 1000));
+        //}
+
+        if (item.volume == null) {
+            String volume = getItemVolume(item);
+            item.setVolume(volume);
+            log.info("Volume set for {} to {}", item.fullpath, volume);
+            restRequestService.sendLiveMessage(String.format("%s volume set to %s", item.getTitle(), volume));
+        }
 
     }
 
@@ -103,7 +155,7 @@ public class MediaDbService {
         }
     }
 
-    private Long getItemDuration(MediaItem item) throws IOException, InterruptedException, ParseException {
+   /* private Long getItemDuration(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String json;
         json = ProcessUtil.executeProcess(
                 ffprobeApp,
@@ -127,8 +179,44 @@ public class MediaDbService {
         }
 
         return 0L;
+    }*/
+
+    public long getVideoDuration(String filePath) {
+        Path videoPath = Path.of(filePath);
+
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder(ffmpegApp, "-i", videoPath.toString());
+            Process process = processBuilder.start();
+
+            // Read the output of the FFmpeg command
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.contains("Duration:")) {
+                        // Parse the duration information
+                        String durationString = line.split("Duration: ")[1].split(",")[0].trim();
+                        return parseDurationString(durationString);
+                    }
+                }
+            }
+
+            process.waitFor(); // Wait for the process to complete
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        return 0; // Return 0 if the duration couldn't be determined
     }
 
+    private static long parseDurationString(String durationString) {
+        String[] parts = durationString.split(":");
+        int hours = Integer.parseInt(parts[0]);
+        int minutes = Integer.parseInt(parts[1]);
+        double seconds = Double.parseDouble(parts[2]);
+
+        return (long) (((double) hours * 3600 + (double) minutes * 60 + seconds) * 1000); // Round to the nearest second
+    }
 
     private String getItemVolume(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String volumeString = ProcessUtil.executeProcess(

@@ -40,6 +40,12 @@ public class MediaController {
     @Autowired
     MediaDbService mediaDbService;
 
+    @GetMapping("/processing/trigger")
+    public String triggerProcessing() {
+        mediaDbService.startFullProcessing();
+        return "ok";
+    }
+
     @GetMapping("/seek/{time}")
     public String seek(@PathVariable String time) {
         if (time.matches("[0-9][0-9]:[0-9][0-9]")) {
@@ -123,7 +129,7 @@ public class MediaController {
         return mediaRepository
                 .findAll()
                 .stream()
-                .filter(i -> Arrays.stream(query.split("\\W")).allMatch(token -> i.getFullpath().toLowerCase().contains(token.toLowerCase())))
+                .filter(i -> Arrays.stream(query.split("[ ]")).allMatch(token -> i.getFullpath().toLowerCase().contains(token.toLowerCase())))
                 .sorted(
                         Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).fullpath.toLowerCase(), query.toLowerCase()))
                 )

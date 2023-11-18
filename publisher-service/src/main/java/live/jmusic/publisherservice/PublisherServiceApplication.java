@@ -31,8 +31,8 @@ public class PublisherServiceApplication implements ApplicationRunner {
     @Value("${media.output.rtmp}")
     public String outputRtmp;
 
-    @Value("${media.balancer.script}")
-    public String balancerScript;
+    @Value("${media.balancer.cmd}")
+    public String balancerCmd;
 
     Process blancerProcess;
 
@@ -46,7 +46,7 @@ public class PublisherServiceApplication implements ApplicationRunner {
 
     private void runBalancer() throws IOException {
         //blancerProcess = new ProcessBuilder("java -jar balance-service.jar".split(" "))
-        blancerProcess = new ProcessBuilder(balancerScript)
+        blancerProcess = new ProcessBuilder(balancerCmd.split(" "))
                 .redirectErrorStream(true)
                 .redirectOutput(new File("./logs/log-balancer.log"))
                 .start();
@@ -54,10 +54,10 @@ public class PublisherServiceApplication implements ApplicationRunner {
     }
 
     private void stopBalancer() throws InterruptedException {
+        //Runtime.getRuntime().exec("");
         if (blancerProcess != null && blancerProcess.isAlive()) {
             log.info("Balancer destroyed.");
-            blancerProcess.destroyForcibly(); //.destroy();
-            blancerProcess.waitFor();
+            blancerProcess.destroyForcibly().waitFor();
             Thread.sleep(1000);
         }
     }
@@ -66,6 +66,7 @@ public class PublisherServiceApplication implements ApplicationRunner {
         log.info("Executing publisher");
 
         while (true) {
+            stopBalancer();
             runBalancer();
 
 
@@ -85,7 +86,7 @@ public class PublisherServiceApplication implements ApplicationRunner {
 
             process.waitFor();
             log.info("Publisher terminated.");
-            stopBalancer();
+
         }
 
     }
