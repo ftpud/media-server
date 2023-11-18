@@ -129,12 +129,12 @@ public class MediaDbService {
     }
 
     public void fullProcessMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
-        //if (item.length == null) {
-        Long ms = getVideoDuration(item.getFullpath());
-        item.setLength(ms);
-        log.info("Length set for {} to {}", item.fullpath, ms);
-        restRequestService.sendLiveMessage(String.format("%s length set to %s", item.getTitle(), ms / 1000));
-        //}
+        if (item.length == null) {
+            Long ms = getVideoDuration(item.getFullpath());
+            item.setLength(ms);
+            log.info("Length set for {} to {}", item.fullpath, ms);
+            restRequestService.sendLiveMessage(String.format("%s length set to %s", item.getTitle(), ms / 1000));
+        }
 
         if (item.volume == null) {
             String volume = getItemVolume(item);

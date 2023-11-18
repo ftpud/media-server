@@ -37,24 +37,6 @@ public class BalanceServiceApplication implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
 
-        /** while(true) {
-         FileInputStream is = new FileInputStream(INPUT_PIPE);
-         FileOutputStream os = new FileOutputStream(useFirstPipe ? OUTPUT_PIPE1 : OUTPUT_PIPE2);
-         useFirstPipe = !useFirstPipe;
-
-         byte[] bytes = new byte[0x10000];
-         int numRead = 0;
-         while ((numRead = is.read(bytes, 0, bytes.length)) >= 0) {
-         //res.write(bytes, 0, numRead);
-         os.write(bytes,0, numRead);
-         }
-
-         os.flush();
-         os.close();
-         is.close();
-         }
-         **/
-
         int f = 1;
         while (true) {
             processFLV(INPUT_PIPE, (f % 2 != 0 ? OUTPUT_PIPE1 : OUTPUT_PIPE2));
