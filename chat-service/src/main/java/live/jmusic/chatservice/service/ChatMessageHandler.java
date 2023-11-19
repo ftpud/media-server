@@ -1,5 +1,6 @@
 package live.jmusic.chatservice.service;
 
+import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.shared.util.ConsoleUtilService;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -19,6 +21,8 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
     public ChatMessageHandler(RestRequestService restRequestService, ConsoleUtilService consoleUtilService) {
         this.consoleUtilService = consoleUtilService;
         this.restRequestService = restRequestService;
+        registerEvent("^!select (.+)$",
+                r -> select(r.group(1)), this::everyone);
         registerEvent("^!q (.+)$",
                 r -> enqueue(r.group(1)), this::everyone);
         registerEvent("^!next$",
@@ -41,12 +45,38 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
                 }, this::isModerator);
     }
 
+    private MediaItem[] lastResponse;
+
     private void search(String item) {
         restRequestService.requestSearch(item, i ->
         {
-            String foundText = Arrays.stream(i).map(found -> found.getTitle()).collect(Collectors.joining("\n"));
+            lastResponse = i;
+            StringJoiner joiner = new StringJoiner("\n");
+            for (int j = 0; j < i.length; j++) {
+                MediaItem mediaItem = i[j];
+                String title = mediaItem.getTitle();
+                if (mediaItem.getFullpath().contains("RequestOnly")) {
+                    title = "[Request] ".concat(title);
+                }
+                title = (String.format("[%3s] ", j)).concat(title);
+                String requestOnly = title;
+                joiner.add(requestOnly);
+            }
+            String foundText = joiner.toString();
             restRequestService.sendLiveMessage(foundText);
         });
+    }
+
+    private void select(String num) {
+        try {
+            int number = Integer.parseInt(num);
+            if (lastResponse != null && lastResponse.length > number) {
+                play(lastResponse[number].fullpath);
+            }
+
+        } catch (Exception e) {
+            log.info(e.toString());
+        }
     }
 
     private void seek(String time) {
@@ -95,4 +125,5 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
     public Boolean everyone(String sender) {
         return true;
     }
+
 }

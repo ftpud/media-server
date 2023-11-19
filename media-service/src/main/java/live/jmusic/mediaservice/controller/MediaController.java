@@ -10,10 +10,7 @@ import live.jmusic.shared.rest.RestRequestService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -106,13 +103,13 @@ public class MediaController {
         return rotationRepository.getItemForTime(ChronoService.getTimePointer());
     }
 
-    @GetMapping("/search/{item}")
-    public List<MediaItem> search(@PathVariable("item") String item) {
+    @PostMapping("/search/")
+    public List<MediaItem> search(@RequestBody String item) {
         return searchAll(item, 30);
     }
 
-    @GetMapping("/enqueue/{item}")
-    public MediaItem enqueue(@PathVariable("item") String item) {
+    @PostMapping("/enqueue/")
+    public MediaItem enqueue(@RequestBody String item) {
         Optional<MediaItem> itemFound = searchAll(item, 1).stream().findFirst();
 
         if (itemFound.isPresent()) {
