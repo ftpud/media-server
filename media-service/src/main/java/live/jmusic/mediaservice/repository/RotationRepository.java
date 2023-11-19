@@ -59,6 +59,14 @@ public class RotationRepository {
         return getItemForTime(0L);
     }
 
+    public List<MediaItem> listNext(long time, int number) {
+        RotationItem item = getItemForTime(time);
+        List<MediaItem> response = new ArrayList<>();
+        for(int i=0; i<number;i++) {
+            response.add(rotationList.get(item.rotationPosition + i));
+        }
+        return response;
+    }
 
     public void putNext(MediaItem mediaItem) {
         RotationItem item = getItemForTime(ChronoService.getTimePointer());

@@ -108,6 +108,9 @@ public class MediaDbService {
                 File file = new File(i.fullpath);
                 if (file.exists()) {
                     processFile(file, true);
+                } else {
+                    restRequestService.sendLiveMessage("File doesn't exists anymore: " + i.getFullpath());
+                    mediaRepository.delete(i);
                 }
             });
         });

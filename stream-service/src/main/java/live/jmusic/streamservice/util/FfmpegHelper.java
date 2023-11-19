@@ -99,6 +99,14 @@ public class FfmpegHelper {
                 "-maxrate:v", "5300k",
                 "-bufsize:v", "4300k",
                 "-preset", "veryslow",
+
+                "-rdo","1",
+                "-look_ahead","1",
+                "-look_ahead_depth","20",
+                "-adaptive_i","1",
+                "-adaptive_b","1",
+                "-extbrc","1",
+
                 "-vf", videoFilter + ",format=nv12,hwupload=extra_hw_frames=64,deinterlace_qsv",
                 "-r", "30",
                 "-b:a", "320k",

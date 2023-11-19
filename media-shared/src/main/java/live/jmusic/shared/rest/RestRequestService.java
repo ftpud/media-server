@@ -39,6 +39,10 @@ public class RestRequestService {
         RestClient.recoverablePostRequest(coreServiceUri + "/media/search/", item, MediaItem[].class, onSuccess);
     }
 
+    public void requestList(Consumer<MediaItem[]> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + "/media/list", MediaItem[].class, onSuccess);
+    }
+
     public void requestSeek(String time, Consumer<String> onSuccess) {
         RestClient.recoverableRequest(coreServiceUri + "/media/seek/" + time, String.class, onSuccess);
     }
@@ -52,8 +56,10 @@ public class RestRequestService {
         });
     }
 
+    long msgNum = 0;
     public void sendLiveMessage(String message) {
-        RestClient.recoverablePostRequest(liveServiceUri + String.format("/live/message/%s", message.replaceAll("\\W", "")), message.concat(" "), String.class, r -> {
+        msgNum++;
+        RestClient.recoverablePostRequest(liveServiceUri + String.format("/live/message/%s", "__slot" + msgNum), message.concat(" "), String.class, r -> {
         });
     }
 

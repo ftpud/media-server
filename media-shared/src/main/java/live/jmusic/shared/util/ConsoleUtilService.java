@@ -16,9 +16,11 @@ import java.util.function.Consumer;
 @Service
 public class ConsoleUtilService {
 
+    int ytb_file_number = 0;
+
     public void youtubeDl(String url, String fileName, RestRequestService restRequestService) {
         log.info("Invoking youtube dl");
-
+        ytb_file_number++;
         ProcessBuilder processBuilder = new ProcessBuilder(
                 "yt-dlp",
                 "-f",
@@ -27,18 +29,19 @@ public class ConsoleUtilService {
                 "mkv",
                 url,
                 "-o",
-                "/tmp/youtube.tmp");
+                "/tmp/youtube" + ytb_file_number + ".tmp");
         processBuilder.redirectErrorStream(true);
 
 
         try {
-            runBashCommand(processBuilder.start(), response -> {
+            runBashCommand(processBuilder.start(), true, response -> {
                         restRequestService.sendLiveMessage(fileName.replaceAll("[^a-zA-Z]", ""), "+" + response);
                         System.out.println(response);
                     }
             );
 
-            Path f = new File("/tmp/youtube.tmp.mkv").toPath();
+
+            Path f = new File("/tmp/youtube" + ytb_file_number + ".tmp.mkv").toPath();
             Path output = Paths.get("/mnt/1tb_3/content/RequestOnly/youtubedl/", fileName + ".mkv");
             Files.move(f, output, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
@@ -46,7 +49,7 @@ public class ConsoleUtilService {
         }
     }
 
-    public static void runBashCommand(Process process, Consumer<String> lineConsumer) {
+    public static void runBashCommand(Process process, boolean wait, Consumer<String> lineConsumer) {
         CompletableFuture.runAsync(() -> {
             try {
 
@@ -75,6 +78,16 @@ public class ConsoleUtilService {
                 e.printStackTrace();
             }
         });
+
+        try {
+
+
+            if (wait) {
+                process.waitFor();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

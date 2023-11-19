@@ -25,6 +25,8 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
                 r -> select(r.group(1)), this::everyone);
         registerEvent("^!q (.+)$",
                 r -> enqueue(r.group(1)), this::everyone);
+        registerEvent("^!qq (.+)$",
+                r -> enqueueAll(r.group(1)), this::everyone);
         registerEvent("^!next$",
                 r -> next(), this::everyone);
         registerEvent("^!play (.+)$",
@@ -43,6 +45,9 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
 
                     consoleUtilService.youtubeDl(r.group(1), r.group(2), restRequestService);
                 }, this::isModerator);
+
+        registerEvent("^!list$",
+                r -> list(), this::everyone);
     }
 
     private MediaItem[] lastResponse;
@@ -100,6 +105,13 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         );
     }
 
+    private void enqueueAll(String item) {
+        restRequestService.requestSearch(item, i ->
+        {
+            Arrays.stream(i).forEach(mi -> enqueue(mi.getFullpath()));
+        });
+    }
+
     private void play(String item) {
         restRequestService.requestEnqueue(item, itm -> {
                     if (itm == null) {
@@ -120,6 +132,12 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
                     }
                 }
         );
+    }
+
+    private void list() {
+        restRequestService.requestList(i -> {
+            Arrays.stream(i).forEach(itm -> restRequestService.sendLiveMessage(itm.getTitle()));
+        });
     }
 
     public Boolean isModerator(String sender) {

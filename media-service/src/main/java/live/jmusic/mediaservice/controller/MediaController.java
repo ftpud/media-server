@@ -119,6 +119,10 @@ public class MediaController {
         return itemFound.orElse(null);
     }
 
+    @GetMapping("/list")
+    public List<MediaItem> list() {
+        return listNext(30);
+    }
 
     LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
 
@@ -132,5 +136,9 @@ public class MediaController {
                 )
                 .limit(limit)
                 .collect(Collectors.toList());
+    }
+
+    private List<MediaItem> listNext(int limit) {
+        return rotationRepository.listNext(ChronoService.getTimePointer(), limit);
     }
 }
