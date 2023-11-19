@@ -33,7 +33,7 @@ public class ConsoleUtilService {
 
         try {
             runBashCommand(processBuilder.start(), response -> {
-                        restRequestService.sendLiveMessage(fileName.replaceAll("[^a-zA-Z]", ""), response);
+                        restRequestService.sendLiveMessage(fileName.replaceAll("[^a-zA-Z]", ""), "+" + response);
                         System.out.println(response);
                     }
             );

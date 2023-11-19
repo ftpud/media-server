@@ -48,12 +48,12 @@ public class RestRequestService {
     }
 
     public void sendLiveMessage(String slot, String message) {
-        RestClient.recoverablePostRequest(liveServiceUri + String.format("/live/message/%s", slot), message, String.class, r -> {
+        RestClient.recoverablePostRequest(liveServiceUri + String.format("/live/message/__%s", slot), message.concat(" "), String.class, r -> {
         });
     }
 
     public void sendLiveMessage(String message) {
-        RestClient.recoverablePostRequest(liveServiceUri + String.format("/live/message/%s", message.replaceAll("\\W", "")), message, String.class, r -> {
+        RestClient.recoverablePostRequest(liveServiceUri + String.format("/live/message/%s", message.replaceAll("\\W", "")), message.concat(" "), String.class, r -> {
         });
     }
 

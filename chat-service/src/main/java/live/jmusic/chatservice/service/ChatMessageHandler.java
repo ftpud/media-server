@@ -63,7 +63,11 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
                 joiner.add(requestOnly);
             }
             String foundText = joiner.toString();
-            restRequestService.sendLiveMessage(foundText);
+            if ("".equals(foundText)) {
+                restRequestService.sendLiveMessage("Nothing found");
+            } else {
+                restRequestService.sendLiveMessage(foundText);
+            }
         });
     }
 
