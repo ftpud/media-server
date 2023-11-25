@@ -1,5 +1,6 @@
 package live.jmusic.mediaservice.repository;
 
+import live.jmusic.shared.model.QueuedItem;
 import live.jmusic.shared.model.RotationItem;
 import live.jmusic.shared.model.MediaItem;
 import live.jmusic.mediaservice.service.ChronoService;
@@ -7,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -68,8 +68,13 @@ public class RotationRepository {
         return response;
     }
 
-    public void putNext(MediaItem mediaItem) {
+    public void putNextQueued(MediaItem mediaItem) {
         RotationItem item = getItemForTime(ChronoService.getTimePointer());
-        rotationList.add(item.rotationPosition + 1, mediaItem);
+
+        int pos = 1;
+        while(rotationList.get(item.rotationPosition + pos) instanceof QueuedItem) {
+            pos++;
+        }
+        rotationList.add(item.rotationPosition + pos, mediaItem);
     }
 }

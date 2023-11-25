@@ -25,6 +25,11 @@ public class VideoFilterBuilder {
         return this;
     }
 
+    public VideoFilterBuilder withZmq() {
+        filterList.add("zmq");
+        return this;
+    }
+
 
     public VideoFilterDrawTextBuilder withDrawText() {
         return new VideoFilterDrawTextBuilder(this);

@@ -1,6 +1,7 @@
 package live.jmusic.mediaservice.controller;
 
 import live.jmusic.mediaservice.service.MediaDbService;
+import live.jmusic.shared.model.QueuedItem;
 import live.jmusic.shared.model.RotationItem;
 import live.jmusic.mediaservice.repository.RotationRepository;
 import live.jmusic.mediaservice.repository.MediaRepository;
@@ -12,10 +13,7 @@ import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -113,7 +111,8 @@ public class MediaController {
         Optional<MediaItem> itemFound = searchAll(item, 1).stream().findFirst();
 
         if (itemFound.isPresent()) {
-            rotationRepository.putNext(itemFound.get());
+            QueuedItem queued = new QueuedItem(itemFound.get());
+            rotationRepository.putNextQueued(queued);
         }
 
         return itemFound.orElse(null);

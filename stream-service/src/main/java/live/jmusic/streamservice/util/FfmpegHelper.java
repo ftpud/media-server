@@ -9,8 +9,11 @@ public class FfmpegHelper {
 
     public static String buildVideoFilter(RotationItem currentItem, Optional<String> subtitlesFilter) {
         return VideoFilterBuilder.create()
+                .withZmq()
+
                 .withScale(1920, 1080)
                 .withPad(1920, 1080)
+
                 .withDrawText()
                 .withText(currentItem.getMediaItem().getTitle())
                 .withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc")
@@ -33,6 +36,18 @@ public class FfmpegHelper {
                 .buildDrawText()
 
                 .withSubtitles(subtitlesFilter)
+
+                // ZMQ slots
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "100").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "130").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "160").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "190").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "220").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "250").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "280").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "310").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "340").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
+                //.withDrawText().withText(" ").withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc").withPosition("0", "370").withFontSize(24).withFontColor("white").withBox("black").withBoxBorder(4).buildDrawText()
 
                 .build();
     }
