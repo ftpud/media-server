@@ -80,9 +80,9 @@ public class FfmpegHelper {
                 "-r", "30",
                 "-af", audioFilter,
                 "-g", "60",
-                "-b:v", "3500k",
-                "-maxrate:v", "3500k",
-                "-minrate:v", "3500k",
+                "-b:v", "5500k",
+                "-maxrate:v", "5500k",
+                "-minrate:v", "5500k",
                 "-f", "flv",
                 "pipe:1"
         };
@@ -110,9 +110,9 @@ public class FfmpegHelper {
                 "-async", "1",
                 "-c:v", "h264_qsv",
                 "-bf", "2",
-                "-b:v", "4300k",
+                "-b:v", "5300k",
                 "-maxrate:v", "5300k",
-                "-bufsize:v", "4300k",
+                "-bufsize:v", "5300k",
                 "-preset", "veryslow",
 
                 "-rdo","1",
