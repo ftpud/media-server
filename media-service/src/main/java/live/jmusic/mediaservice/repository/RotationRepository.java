@@ -56,6 +56,10 @@ public class RotationRepository {
         }
 
         ChronoService.resetTime();
+
+        rotationList.removeIf(i -> i instanceof QueuedItem);
+        Collections.shuffle(rotationList);
+
         return getItemForTime(0L);
     }
 
