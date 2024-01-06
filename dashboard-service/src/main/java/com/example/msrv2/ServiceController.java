@@ -25,7 +25,7 @@ class ServiceController {
             "chat-service.jar",
             "media-service.jar",
             "stream-service.jar",
-            "ff_stream",
+            "ffmpeg",
             "dashboard-service.jar"
     );
 
@@ -39,7 +39,7 @@ class ServiceController {
         serviceLogMap.put("chat-service.jar", Collections.singletonList("chat-service.log"));
         serviceLogMap.put("media-service.jar", Collections.singletonList("media-service.log"));
         serviceLogMap.put("stream-service.jar", Collections.singletonList("stream-service.log"));
-        serviceLogMap.put("ff_stream", Collections.singletonList("---log-stream-ffmpeg.log"));
+        serviceLogMap.put("ffmpeg", Collections.singletonList("---log-stream-ffmpeg.log"));
         serviceLogMap.put("dashboard-service.jar", Arrays.asList("dashboard-service.log"));
     }
 

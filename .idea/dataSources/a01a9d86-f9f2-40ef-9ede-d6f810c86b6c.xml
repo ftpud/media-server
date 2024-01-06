@@ -169,15 +169,15 @@
     <schema id="162" parent="2" name="INFORMATION_SCHEMA"/>
     <schema id="163" parent="2" name="PUBLIC">
       <Current>1</Current>
-      <IntrospectionTimestamp>2023-11-18.21:35:55.942</IntrospectionTimestamp>
-      <LocalIntrospectionTimestamp>2023-11-18.19:35:55</LocalIntrospectionTimestamp>
+      <IntrospectionTimestamp>2024-01-04.00:24:37.437</IntrospectionTimestamp>
+      <LocalIntrospectionTimestamp>2024-01-03.22:24:37</LocalIntrospectionTimestamp>
     </schema>
     <user id="164" parent="2" name="SA">
       <Admin>1</Admin>
     </user>
     <sequence id="165" parent="163" name="HIBERNATE_SEQUENCE">
       <DasType>BIGINT|0s</DasType>
-      <SequenceIdentity>1(5857)</SequenceIdentity>
+      <SequenceIdentity>1(6344)</SequenceIdentity>
       <StartValue>1</StartValue>
     </sequence>
     <table id="166" parent="163" name="MEDIA_ITEM"/>

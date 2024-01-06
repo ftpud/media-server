@@ -22,8 +22,8 @@ public class PublisherServiceApplication implements ApplicationRunner {
         SpringApplication.run(PublisherServiceApplication.class, args);
     }
 
-    @Value("${media.publisher.ffmpeg.path}")
-    public String publisherPath;
+    @Value("${media.publisher.working.directory}")
+    public String workingDirectory;
 
     @Value("${media.publisher.ffmpeg.app}")
     public String publisherApp;
@@ -70,8 +70,8 @@ public class PublisherServiceApplication implements ApplicationRunner {
             runBalancer();
 
 
-            Process process = new ProcessBuilder((publisherPath + publisherApp + " -loglevel error -f concat -i list.txt -flags low_delay -movflags +faststart -bsf:v h264_mp4toannexb -c copy -f flv " + outputRtmp).split(" "))
-                    .directory(new File(publisherPath))
+            Process process = new ProcessBuilder((publisherApp + " -loglevel error -f concat -i list.txt -flags low_delay -movflags +faststart -bsf:v h264_mp4toannexb -c copy -f flv " + outputRtmp).split(" "))
+                    .directory(new File(workingDirectory))
                     .redirectOutput(new File("./logs/log-publisher.log"))
                     .redirectErrorStream(true)
                     .start();

@@ -42,7 +42,7 @@ public class ConsoleUtilService {
 
 
             Path f = new File("/tmp/youtube" + ytb_file_number + ".tmp.mkv").toPath();
-            Path output = Paths.get("/mnt/1tb_3/content/RequestOnly/youtubedl/", fileName + ".mkv");
+            Path output = Paths.get("/mnt/1tb_m2/user/akb/RequestOnly/youtubedl/", fileName + ".mkv");
             Files.move(f, output, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {
             e.printStackTrace();

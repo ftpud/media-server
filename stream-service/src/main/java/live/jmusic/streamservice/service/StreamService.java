@@ -41,6 +41,9 @@ public class StreamService {
     public String profile;
 
 
+    @Value("${media.live.file}")
+    public String liveFile;
+
     private Process ffmpegProcess;
 
     public void run() {
@@ -68,21 +71,21 @@ public class StreamService {
 
             Optional<String> subtitlesFilter = subtitlesService.buildSubtitles(currentItem);
 
-            String vf = FfmpegHelper.buildVideoFilter(currentItem, subtitlesFilter);
+            String vf = FfmpegHelper.buildVideoFilter(currentItem, subtitlesFilter, liveFile);
             String volume = getAudioFilter(currentItem.getMediaItem());
             restRequestService.sendLiveMessage("Loaded with: " + volume);
 
 
             if ("prod".equals(profile)) {
                 String[] cmd = FfmpegHelper.getFfmpegProdCommand(
-                        streamPath + "/" + streamApp,
+                        streamApp,
                         currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume);
                 processBuilder = new ProcessBuilder(cmd);
 
                 log.info(Arrays.stream(cmd).collect(Collectors.joining(" ")));
             } else {
                 processBuilder = new ProcessBuilder(FfmpegHelper.getFfmpegPreProdCommand(
-                        streamPath + "/" + streamApp,
+                        streamApp,
                         currentItem.getCurrentTime(), currentItem.getMediaItem().getFullpath(), vf, volume));
 
 

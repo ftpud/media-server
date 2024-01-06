@@ -66,7 +66,7 @@
 						</goals>
 						<configuration>
 							<serverId>ssh-repository</serverId>
-							<url>scp://192.168.0.129/home/ftpud/media-server/deploy/</url>
+							<url>scp://192.168.0.184/home/ftpud/media-server/deploy/</url>
 							<fromDir>${project.build.directory}</fromDir>
 							<includes>*.jar</includes>
 						</configuration>

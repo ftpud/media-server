@@ -148,7 +148,7 @@ function disableButton(button) {
 // Function to fetch service status via AJAX
 function fetchServiceStatus() {
     $.ajax({
-        url: 'http://192.168.0.129:9090/status',
+        url: 'http://192.168.0.184:9090/status',
         method: 'GET',
         dataType: 'json',
         success: function (data) {
@@ -167,7 +167,7 @@ fetchServiceStatus();
 function restartService(serviceName) {
     console.log('Restarting ' + serviceName);
     $.ajax({
-        url: 'http://192.168.0.129:9090/restart/' + serviceName,
+        url: 'http://192.168.0.184:9090/restart/' + serviceName,
         method: 'GET',
         success: function () {
             fetchServiceStatus();
@@ -182,7 +182,7 @@ function restartService(serviceName) {
 function startService(serviceName) {
     console.log('Starting ' + serviceName);
     $.ajax({
-        url: 'http://192.168.0.129:9090/start/' + serviceName,
+        url: 'http://192.168.0.184:9090/start/' + serviceName,
         method: 'GET',
         success: function () {
             fetchServiceStatus();
@@ -197,7 +197,7 @@ function startService(serviceName) {
 function stopService(serviceName) {
     console.log('Stopping ' + serviceName);
     $.ajax({
-        url: 'http://192.168.0.129:9090/stop/' + serviceName,
+        url: 'http://192.168.0.184:9090/stop/' + serviceName,
         method: 'GET',
         success: function () {
             fetchServiceStatus();
@@ -212,7 +212,7 @@ function stopService(serviceName) {
 function deployService(serviceName) {
     console.log('Deploying ' + serviceName);
     $.ajax({
-        url: 'http://192.168.0.129:9090/deploy/' + serviceName,
+        url: 'http://192.168.0.184:9090/deploy/' + serviceName,
         method: 'GET',
         success: function () {
             fetchServiceStatus();
@@ -236,7 +236,7 @@ function viewLog(logFile) {
 
     function updateLogs() {
         $.ajax({
-            url: 'http://192.168.0.129:9090/log/' + logFile,
+            url: 'http://192.168.0.184:9090/log/' + logFile,
             method: 'GET',
             success: function (data) {
                 // Convert the array of log lines to a formatted string with line breaks

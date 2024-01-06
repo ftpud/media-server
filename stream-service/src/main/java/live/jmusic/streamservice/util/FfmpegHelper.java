@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public class FfmpegHelper {
 
-    public static String buildVideoFilter(RotationItem currentItem, Optional<String> subtitlesFilter) {
+    public static String buildVideoFilter(RotationItem currentItem, Optional<String> subtitlesFilter, String liveFile) {
         return VideoFilterBuilder.create()
                 .withZmq()
 
@@ -25,7 +25,7 @@ public class FfmpegHelper {
                 .buildDrawText()
 
                 .withDrawText()
-                .withTextFile("live.txt")
+                .withTextFile(liveFile)
                 .withFontFile("/usr/share/fonts/truetype/wqy/wqy-microhei.ttc")
                 .withPosition("2", "H-th")
                 .withFontSize(24)
@@ -80,9 +80,9 @@ public class FfmpegHelper {
                 "-r", "30",
                 "-af", audioFilter,
                 "-g", "60",
-                "-b:v", "5500k",
-                "-maxrate:v", "5500k",
-                "-minrate:v", "5500k",
+                "-b:v", "2000k",
+                "-maxrate:v", "2000k",
+                "-minrate:v", "2000k",
                 "-f", "flv",
                 "pipe:1"
         };
@@ -110,17 +110,20 @@ public class FfmpegHelper {
                 "-async", "1",
                 "-c:v", "h264_qsv",
                 "-bf", "2",
-                "-b:v", "5300k",
-                "-maxrate:v", "5300k",
-                "-bufsize:v", "5300k",
+               // "-b:v", "4300k",
+               // "-maxrate:v", "5300k",
+               // "-bufsize:v", "4300k",
+                "-b:v", "4500k",
+                "-maxrate:v", "5500k",
+                "-bufsize:v", "4500k",
                 "-preset", "veryslow",
 
-                "-rdo","1",
-                "-look_ahead","1",
-                "-look_ahead_depth","20",
-                "-adaptive_i","1",
-                "-adaptive_b","1",
-                "-extbrc","1",
+           //     "-rdo","1",
+           //     "-look_ahead","1",
+           //     "-look_ahead_depth","20",
+           //     "-adaptive_i","1",
+           //     "-adaptive_b","1",
+           //     "-extbrc","1",
 
                 "-vf", videoFilter + ",format=nv12,hwupload=extra_hw_frames=64,deinterlace_qsv",
                 "-r", "30",
