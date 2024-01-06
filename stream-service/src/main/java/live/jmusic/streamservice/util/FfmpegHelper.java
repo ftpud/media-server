@@ -9,7 +9,7 @@ public class FfmpegHelper {
 
     public static String buildVideoFilter(RotationItem currentItem, Optional<String> subtitlesFilter, String liveFile) {
         return VideoFilterBuilder.create()
-                .withZmq()
+                //.withZmq()
 
                 .withScale(1920, 1080)
                 .withPad(1920, 1080)
@@ -93,9 +93,10 @@ public class FfmpegHelper {
                                                 String videoFilter, String audioFilter) {
         return new String[]{
                 ffmpeg,
+                "-threads", "1",
                 "-init_hw_device", "qsv=hw",
                 "-filter_hw_device", "hw",
-                "-hwaccel", "qsv",
+               // "-hwaccel", "qsv",
                 "-hwaccel_output_format", "qsv",
                 "-ss", String.format("%sms", startTime),
                 "-re",
@@ -118,14 +119,14 @@ public class FfmpegHelper {
                 "-bufsize:v", "4500k",
                 "-preset", "veryslow",
 
-           //     "-rdo","1",
-           //     "-look_ahead","1",
-           //     "-look_ahead_depth","20",
-           //     "-adaptive_i","1",
-           //     "-adaptive_b","1",
-           //     "-extbrc","1",
+                "-rdo","1",
+                "-look_ahead","1",
+                "-look_ahead_depth","20",
+                "-adaptive_i","1",
+                "-adaptive_b","1",
+                "-extbrc","1",
 
-                "-vf", videoFilter + ",format=nv12,hwupload=extra_hw_frames=64,deinterlace_qsv",
+                "-vf", videoFilter + ",yadif", // ",format=nv12,hwupload=extra_hw_frames=64,deinterlace_qsv",
                 "-r", "30",
                 "-b:a", "320k",
                 "-c:a", "aac",

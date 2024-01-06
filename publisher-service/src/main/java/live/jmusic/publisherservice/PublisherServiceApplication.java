@@ -70,7 +70,7 @@ public class PublisherServiceApplication implements ApplicationRunner {
             runBalancer();
 
 
-            Process process = new ProcessBuilder((publisherApp + " -loglevel error -f concat -i list.txt -flags low_delay -movflags +faststart -bsf:v h264_mp4toannexb -c copy -f flv " + outputRtmp).split(" "))
+            Process process = new ProcessBuilder((publisherApp + " -threads 1 -f concat -i list.txt -flags low_delay -movflags +faststart -bsf:v h264_mp4toannexb -c copy -f flv " + outputRtmp).split(" "))
                     .directory(new File(workingDirectory))
                     .redirectOutput(new File("./logs/log-publisher.log"))
                     .redirectErrorStream(true)

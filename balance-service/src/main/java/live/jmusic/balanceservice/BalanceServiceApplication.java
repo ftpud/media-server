@@ -47,6 +47,34 @@ public class BalanceServiceApplication implements ApplicationRunner {
 
     ////////////////
 
+    public static void processFile(String inputPath, String outputPath) {
+
+        try (
+                FileInputStream inputFileStream = new FileInputStream(inputPath);
+                DataInputStream dataInputStream = new DataInputStream(inputFileStream);
+                FileOutputStream outputFileStream = new FileOutputStream(outputPath);
+                DataOutputStream dataOutputStream = new DataOutputStream(outputFileStream);
+        ) {
+
+            // Read from input stream and write to output stream
+            byte[] buffer = new byte[4096]; // You can adjust the buffer size as needed
+            int bytesRead;
+
+            while ((bytesRead = dataInputStream.read(buffer)) != -1) {
+                dataOutputStream.write(buffer, 0, bytesRead);
+                dataOutputStream.flush();
+            }
+
+            // Close streams
+            dataInputStream.close();
+            dataOutputStream.close();
+
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void processFLV(String inputPath, String outputPath) {
         try (
                 FileInputStream inputFileStream = new FileInputStream(inputPath);

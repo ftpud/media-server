@@ -18,8 +18,8 @@ import java.util.*;
 @Service
 public class SubtitlesService {
 
-    @Value("${media.ffmpeg.stream.path}")
-    public String streamPath;
+    //@Value("${media.ffmpeg.stream.path}")
+    //public String streamPath;
 
     @Value("${media.ffmpeg.stream.app}")
     public String streamApp;
@@ -81,8 +81,8 @@ public class SubtitlesService {
     public void runSubtitlesConvertProcess(String source, String target, Long startTime) {
         try {
             Process processBuilder = new ProcessBuilder(
-                    streamPath + "/" + streamApp,
-                    "-y", "-ss", convertLongToTime(startTime), "-i", source, target
+                    streamApp,
+                    "-y", "-i", source, "-ss", convertLongToTime(startTime), target
             )
                     .redirectError(new File("logs/log-sub-ffmpeg.log"))
                     .start();
