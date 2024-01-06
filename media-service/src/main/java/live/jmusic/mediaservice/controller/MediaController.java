@@ -108,9 +108,23 @@ public class MediaController {
 
     @PostMapping("/enqueue/")
     public MediaItem enqueue(@RequestBody String item) {
+        return enqueueItem(item, false);
+    }
+
+    @PostMapping("/enqueue/next/")
+    public MediaItem enqueueNext(@RequestBody String item) {
+        return enqueueItem(item, true);
+    }
+
+    @GetMapping("/list")
+    public List<MediaItem> list() {
+        return listNext(30);
+    }
+
+    private MediaItem enqueueItem(String item, boolean next) {
         Optional<MediaItem> itemFound = searchAll(item, 1).stream().findFirst();
 
-        if (itemFound.isPresent()) {
+        if (!next && itemFound.isPresent()) {
             QueuedItem queued = new QueuedItem(itemFound.get());
             rotationRepository.putNextQueued(queued);
         }
@@ -118,10 +132,6 @@ public class MediaController {
         return itemFound.orElse(null);
     }
 
-    @GetMapping("/list")
-    public List<MediaItem> list() {
-        return listNext(30);
-    }
 
     LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
 

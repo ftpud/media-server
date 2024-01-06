@@ -35,6 +35,10 @@ public class RestRequestService {
         RestClient.recoverablePostRequest(coreServiceUri + "/media/enqueue/", item, MediaItem.class, onSuccess);
     }
 
+    public void requestEnqueueNext(String item, Consumer<MediaItem> onSuccess) {
+        RestClient.recoverablePostRequest(coreServiceUri + "/media/enqueue/next/", item, MediaItem.class, onSuccess);
+    }
+
     public void requestSearch(String item, Consumer<MediaItem[]> onSuccess) {
         RestClient.recoverablePostRequest(coreServiceUri + "/media/search/", item, MediaItem[].class, onSuccess);
     }

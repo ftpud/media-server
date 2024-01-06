@@ -113,7 +113,7 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
     }
 
     private void play(String item) {
-        restRequestService.requestEnqueue(item, itm -> {
+        restRequestService.requestEnqueueNext(item, itm -> {
                     if (itm == null) {
                         restRequestService.sendLiveMessage(item + " not found");
                     } else {
