@@ -2,11 +2,9 @@ package live.jmusic.shared.model;
 
 import lombok.Data;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -18,7 +16,10 @@ public class MediaItem {
 
     public String fullpath;
     public String title;
-    public ArrayList<String> tags;
+
+    @ElementCollection
+    public List<String> tags = new ArrayList<>();
+
     public String volume;
     public Long length;
     public boolean isProcessed;

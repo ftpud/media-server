@@ -48,6 +48,13 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
 
         registerEvent("^!list$",
                 r -> list(), this::everyone);
+
+        registerEvent("^\\+(.+)$",
+                r -> addTag(r.group(1)), this::isModerator);
+        registerEvent("^-(.+)$",
+                r -> removeTag(r.group(1)), this::isModerator);
+        registerEvent("^!tags",
+                r -> viewTags(), this::isModerator);
     }
 
     private MediaItem[] lastResponse;
@@ -138,6 +145,24 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         restRequestService.requestList(i -> {
             Arrays.stream(i).forEach(itm -> restRequestService.sendLiveMessage(itm.getTitle()));
         });
+    }
+
+    private void viewTags() {
+        restRequestService.listTags(i ->
+            restRequestService.sendLiveMessage(Arrays.stream(i).collect(Collectors.joining(", ")))
+        );
+    }
+
+    private void addTag(String tag) {
+        restRequestService.addTag(tag, i ->
+                restRequestService.sendLiveMessage("+" + tag)
+        );
+    }
+
+    private void removeTag(String tag) {
+        restRequestService.removeTag(tag, i ->
+                restRequestService.sendLiveMessage("-" + tag)
+        );
     }
 
     public Boolean isModerator(String sender) {

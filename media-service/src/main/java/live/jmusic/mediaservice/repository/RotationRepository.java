@@ -72,12 +72,14 @@ public class RotationRepository {
         return response;
     }
 
-    public void putNextQueued(MediaItem mediaItem) {
+    public void putNextQueued(MediaItem mediaItem, boolean putFirst) {
         RotationItem item = getItemForTime(ChronoService.getTimePointer());
 
         int pos = 1;
-        while(rotationList.get(item.rotationPosition + pos) instanceof QueuedItem) {
-            pos++;
+        if(!putFirst) {
+            while (rotationList.get(item.rotationPosition + pos) instanceof QueuedItem) {
+                pos++;
+            }
         }
         rotationList.add(item.rotationPosition + pos, mediaItem);
     }

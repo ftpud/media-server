@@ -10,6 +10,7 @@ import live.jmusic.mediaservice.service.ChronoService;
 import live.jmusic.shared.rest.RestRequestService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.LevenshteinDistance;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -124,9 +125,9 @@ public class MediaController {
     private MediaItem enqueueItem(String item, boolean next) {
         Optional<MediaItem> itemFound = searchAll(item, 1).stream().findFirst();
 
-        if (!next && itemFound.isPresent()) {
+        if (itemFound.isPresent()) {
             QueuedItem queued = new QueuedItem(itemFound.get());
-            rotationRepository.putNextQueued(queued);
+            rotationRepository.putNextQueued(queued, next);
         }
 
         return itemFound.orElse(null);
@@ -139,7 +140,7 @@ public class MediaController {
         return mediaRepository
                 .findAll()
                 .stream()
-                .filter(i -> Arrays.stream(query.split("[ ]")).allMatch(token -> i.getFullpath().toLowerCase().contains(token.toLowerCase())))
+                .filter(i -> Arrays.stream(query.split("[ ]")).allMatch(token -> i.getFullpath().concat(i.getTags().stream().collect(Collectors.joining(" "))).toLowerCase().contains(token.toLowerCase())))
                 .sorted(
                         Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).fullpath.toLowerCase(), query.toLowerCase()))
                 )
@@ -150,4 +151,30 @@ public class MediaController {
     private List<MediaItem> listNext(int limit) {
         return rotationRepository.listNext(ChronoService.getTimePointer(), limit);
     }
+
+
+    @PostMapping("/tags/add")
+    public String tagsAdd(@RequestBody String tag) {
+        RotationItem item = rotationRepository.getItemForTime(ChronoService.getTimePointer());
+        mediaDbService.addTag(item.getMediaItem(), tag);
+        return "ok";
+    }
+
+    @PostMapping("/tags/remove")
+    public String tagsRemove(@RequestBody String tag) {
+        RotationItem item = rotationRepository.getItemForTime(ChronoService.getTimePointer());
+        mediaDbService.removeTag(item.getMediaItem(), tag);
+        return "ok";
+    }
+
+    @GetMapping("/tags/list")
+    public String[] tagsList() {
+        RotationItem item = rotationRepository.getItemForTime(ChronoService.getTimePointer());
+        if (item.getMediaItem().getTags() != null) {
+            return item.getMediaItem().getTags().toArray(String[]::new);
+        } else {
+            return new String[]{};
+        }
+    }
+
 }

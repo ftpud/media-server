@@ -60,6 +60,19 @@ public class RestRequestService {
         });
     }
 
+
+    public void addTag(String tag, Consumer<String> onSuccess) {
+        RestClient.recoverablePostRequest(coreServiceUri + String.format("/media/tags/add"), tag, String.class, onSuccess);
+    }
+
+    public void removeTag(String tag, Consumer<String> onSuccess) {
+        RestClient.recoverablePostRequest(coreServiceUri + String.format("/media/tags/remove"), tag, String.class, onSuccess);
+    }
+
+    public void listTags(Consumer<String[]> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + String.format("/media/tags/list"), String[].class, onSuccess);
+    }
+
     long msgNum = 0;
     public void sendLiveMessage(String message) {
         msgNum++;

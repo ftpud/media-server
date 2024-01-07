@@ -25,8 +25,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 
 @Service
 @Slf4j
@@ -237,5 +240,32 @@ public class MediaDbService {
         }
 
         return null;
+    }
+
+    public  void addTag(MediaItem item, String tag) {
+        if(isNotEmpty(tag)) {
+            if(item.getTags() == null) {
+                item.setTags(new ArrayList<>());
+            }
+
+            MediaItem repoItm = mediaRepository.findById(item.id).get();
+            repoItm.getTags().add(tag);
+            item.getTags().add(tag);
+            mediaRepository.save(repoItm);
+        }
+    }
+
+
+    public void removeTag(MediaItem item, String tag) {
+        if(isNotEmpty(tag)) {
+            if(item.getTags() == null) {
+                item.setTags(new ArrayList<>());
+            }
+
+            MediaItem repoItm = mediaRepository.findById(item.id).get();
+            repoItm.getTags().removeIf(t -> t.equals(tag));
+            item.getTags().removeIf(t -> t.equals(tag));
+            mediaRepository.save(repoItm);
+        }
     }
 }
