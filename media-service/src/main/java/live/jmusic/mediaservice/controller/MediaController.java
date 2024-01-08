@@ -14,6 +14,7 @@ import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.File;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -36,9 +37,22 @@ public class MediaController {
     @Autowired
     MediaDbService mediaDbService;
 
-    @GetMapping("/processing/trigger")
+    @GetMapping("/process/trigger")
     public String triggerProcessing() {
         mediaDbService.startFullProcessing();
+        return "ok";
+    }
+
+    @PostMapping("/process/file")
+    public String processFile(@RequestBody String item) {
+
+        Optional<MediaItem> itemFound = searchAll(item, 1).stream().findFirst();
+
+        if (itemFound.isPresent()) {
+            mediaDbService.processFile(new File(itemFound.get().getFullpath()), true);
+        }
+
+
         return "ok";
     }
 

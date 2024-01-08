@@ -1,5 +1,6 @@
 package live.jmusic.mediaservice.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import live.jmusic.mediaservice.repository.RotationRepository;
 import live.jmusic.mediaservice.repository.MediaRepository;
@@ -121,7 +122,7 @@ public class MediaDbService {
 
     private void processMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
         if (item.length == null) {
-            Long ms = getVideoDuration(item.getFullpath());
+            Long ms = getItemDurationFromStream(item);
             item.setLength(ms);
             log.info("Length set for {} to {}", item.fullpath, ms);
         }
@@ -135,12 +136,12 @@ public class MediaDbService {
     }
 
     public void fullProcessMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
-        if (item.length == null) {
-            Long ms = getVideoDuration(item.getFullpath());
+        //if (item.length == null) {
+            Long ms = getItemDurationFromStream(item);
             item.setLength(ms);
             log.info("Length set for {} to {}", item.fullpath, ms);
             restRequestService.sendLiveMessage(String.format("%s length set to %s", item.getTitle(), ms / 1000));
-        }
+        //}
 
         if (item.volume == null) {
             String volume = getItemVolume(item);
@@ -161,7 +162,7 @@ public class MediaDbService {
         }
     }
 
-   /* private Long getItemDuration(MediaItem item) throws IOException, InterruptedException, ParseException {
+    private Long getItemDurationFromMeta(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String json;
         json = ProcessUtil.executeProcess(
                 ffprobeApp,
@@ -185,9 +186,51 @@ public class MediaDbService {
         }
 
         return 0L;
-    }*/
+    }
 
-    public long getVideoDuration(String filePath) {
+    private Long getItemDurationFromStream(MediaItem item) throws IOException, InterruptedException, ParseException {
+        final String json;
+        json = ProcessUtil.executeProcess(
+                ffprobeApp,
+                "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                "-print_format", "json",
+                "-i",
+                item.fullpath
+        );
+
+        log.info(json);
+
+        ObjectMapper mapper = new ObjectMapper();
+        //Map<String, Object> map = mapper.readValue(json, Map.class);
+
+        try {
+            //String duration = (String) ((Map<String, Object>) map.get("streams")).get("duration");
+
+            JsonNode jsonNode = mapper.readTree(json);
+
+            // Extract the duration
+            String duration = jsonNode
+                    .path("streams")
+                    .get(0)
+                    .path("duration")
+                    .asText();
+
+            log.info("dur: " + duration);
+
+            Duration d = Duration.parse(String.format("PT%sS", duration));
+            Long ms = d.toMillis();
+            return ms;
+        } catch (NullPointerException e) {
+
+        }
+
+        return getItemDurationFromMeta(item);
+    }
+
+    /** public long getVideoDuration(String filePath) {
         Path videoPath = Path.of(filePath);
 
         try {
@@ -213,7 +256,7 @@ public class MediaDbService {
         }
 
         return 0; // Return 0 if the duration couldn't be determined
-    }
+    } **/
 
     private static long parseDurationString(String durationString) {
         String[] parts = durationString.split(":");

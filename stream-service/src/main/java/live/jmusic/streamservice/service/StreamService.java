@@ -124,7 +124,7 @@ public class StreamService {
             } else {
                 invokeCount = 0;
             }
-            if (invokeCount >= 5) {
+            if (invokeCount >= 3) {
                 log.info("Abnormality detected {}", ffmpegProcess.exitValue());
                 restRequestService.requestNext(x -> {});
             }
