@@ -223,8 +223,8 @@ public class MediaDbService {
             Duration d = Duration.parse(String.format("PT%sS", duration));
             Long ms = d.toMillis();
             return ms;
-        } catch (NullPointerException e) {
-
+        } catch (Exception e) {
+            log.info(e.toString());
         }
 
         return getItemDurationFromMeta(item);
