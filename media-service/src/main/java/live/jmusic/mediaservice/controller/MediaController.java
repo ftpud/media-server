@@ -156,7 +156,7 @@ public class MediaController {
                 .stream()
                 .filter(i -> Arrays.stream(query.split("[ ]")).allMatch(token -> i.getFullpath().concat(i.getTags().stream().collect(Collectors.joining(" "))).toLowerCase().contains(token.toLowerCase())))
                 .sorted(
-                        Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).fullpath.toLowerCase(), query.toLowerCase()))
+                        Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).getTitle().toLowerCase(), query.toLowerCase()))
                 )
                 .limit(limit)
                 .collect(Collectors.toList());
