@@ -120,6 +120,20 @@ public class MediaDbService {
         });
     }
 
+    public void startCleanup() {
+        CompletableFuture f = CompletableFuture.runAsync(() -> {
+            mediaRepository.findAll().forEach(i -> {
+                File file = new File(i.fullpath);
+                if (file.exists()) {
+                    // nothing
+                } else {
+                    restRequestService.sendLiveMessage("File doesn't exists anymore: " + i.getFullpath());
+                    mediaRepository.delete(i);
+                }
+            });
+        });
+    }
+
     private void processMediaItem(MediaItem item) throws IOException, InterruptedException, ParseException {
         if (item.length == null) {
             Long ms = getItemDurationFromStream(item);

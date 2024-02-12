@@ -43,6 +43,12 @@ public class MediaController {
         return "ok";
     }
 
+    @GetMapping("/process/cleanup")
+    public String triggerCleanup() {
+        mediaDbService.startCleanup();
+        return "ok";
+    }
+
     @PostMapping("/process/file")
     public String processFile(@RequestBody String item) {
 
