@@ -4,23 +4,26 @@ import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.shared.util.ConsoleUtilService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 @Slf4j
 public class ChatMessageHandler extends ChatMessageHandlerBase {
 
-    ConsoleUtilService consoleUtilService;
+    final ConsoleUtilService consoleUtilService;
 
-    RestRequestService restRequestService;
+    final RestRequestService restRequestService;
 
-    public ChatMessageHandler(RestRequestService restRequestService, ConsoleUtilService consoleUtilService) {
+    final List<String> moderatorsList;
+
+    public ChatMessageHandler(RestRequestService restRequestService, ConsoleUtilService consoleUtilService, List<String> moderatorsList) {
         this.consoleUtilService = consoleUtilService;
         this.restRequestService = restRequestService;
+        this.moderatorsList = moderatorsList;
+
         registerEvent("^!select (.+)$",
                 r -> select(r.group(1)), this::everyone);
         registerEvent("^!q (.+)$",
@@ -166,7 +169,7 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
     }
 
     public Boolean isModerator(String sender) {
-        return Arrays.asList("bober12", "tdsfog", "Акимотыч").contains(sender);
+        return moderatorsList.contains(sender);
     }
 
     public Boolean everyone(String sender) {

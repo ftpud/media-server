@@ -1,13 +1,23 @@
 package live.jmusic.chatservice;
 
-import live.jmusic.chatservice.service.core.Sc2tvChatService;
+import live.jmusic.chatservice.service.ChatMessageHandler;
+import live.jmusic.chatservice.service.core.WebsocketChatService;
+import live.jmusic.chatservice.service.core.goodgame.GoodgameWebsocketHandler;
+import live.jmusic.chatservice.service.core.sc2tv.Sc2tvWebsocketHandler;
+import live.jmusic.chatservice.utils.ExceptionUtil;
+import live.jmusic.shared.rest.RestRequestService;
+import live.jmusic.shared.util.ConsoleUtilService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
+
+import java.util.Arrays;
+import java.util.List;
 
 @Slf4j
 @SpringBootApplication
@@ -18,13 +28,47 @@ public class ChatServiceApplication implements ApplicationRunner {
         SpringApplication.run(ChatServiceApplication.class, args);
     }
 
+    @Value("${media.chat.sc2tv.ws.url}")
+    private String SC2TV_URL;
+
+    @Value("${media.chat.gg.ws.url}")
+    private String GG_URL;
 
     @Autowired
-    Sc2tvChatService sc2tvChatService;
+    WebsocketChatService chatService;
+
+    @Autowired
+    RestRequestService restRequestService;
+
+    @Autowired
+    ConsoleUtilService consoleUtilService;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        sc2tvChatService.run();
+
+        List<String> sc2tvModers = Arrays.asList("bober12", "tdsfog", "Акимотыч");
+        List<String> ggModers = Arrays.asList("ftpud", "Arimas48");
+
+        startChatListener("Sc2tv", () -> chatService.run(SC2TV_URL, new Sc2tvWebsocketHandler("stream/56592", new ChatMessageHandler(restRequestService, consoleUtilService, sc2tvModers))));
+        startChatListener("Goodgame", () -> chatService.run(GG_URL, new GoodgameWebsocketHandler("196745", new ChatMessageHandler(restRequestService, consoleUtilService, ggModers))));
+
+        // Sleep
+        Thread.currentThread().join();
+    }
+
+
+    private void startChatListener(String chatName, Runnable runnable) {
+        Runnable r = () -> {
+            while (true) {
+                log.info("Connecting to " + chatName);
+                ExceptionUtil.recoverable(runnable::run);
+                log.info(chatName + " connection failure");
+                ExceptionUtil.recoverable(() -> Thread.sleep(1000 * 60 * 5));
+            }
+        };
+
+        Thread chatThread = new Thread(r);
+        chatThread.start();
     }
 
 }

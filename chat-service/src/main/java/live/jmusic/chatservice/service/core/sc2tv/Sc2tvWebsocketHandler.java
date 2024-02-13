@@ -1,37 +1,35 @@
-package live.jmusic.chatservice.service.core;
+package live.jmusic.chatservice.service.core.sc2tv;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import live.jmusic.chatservice.model.ChatMessageRoot;
 import live.jmusic.chatservice.service.ChatMessageHandler;
+import live.jmusic.chatservice.service.core.ChatHandlerBase;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.socket.*;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketMessage;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
-public class Sc2tvWebsocketHandler implements WebSocketHandler {
+public class Sc2tvWebsocketHandler extends ChatHandlerBase {
 
-    ChatMessageHandler chatMessageHandler;
+    final ChatMessageHandler chatMessageHandler;
 
-    public Sc2tvWebsocketHandler(ChatMessageHandler chatMessageHandler) {
+    final String channelId;
+
+    public Sc2tvWebsocketHandler(String channelId, ChatMessageHandler chatMessageHandler) {
         this.chatMessageHandler = chatMessageHandler;
+        this.channelId = channelId;
     }
 
-    boolean isAlive = true;
+    final ObjectMapper mapper = new ObjectMapper();
 
-    ObjectMapper mapper = new ObjectMapper();
 
-    private WebSocketSession webSocketSession;
-
-    @Override
-    public void afterConnectionEstablished(WebSocketSession webSocketSession) throws Exception {
-        this.webSocketSession = webSocketSession;
-    }
-
-    String msgRegex = "^\\d+\\[\\\"(.+)\\\",(\\{.+\\})\\]$";
-    Pattern msgPattern = Pattern.compile(msgRegex);
+    final String msgRegex = "^\\d+\\[\\\"(.+)\\\",(\\{.+\\})\\]$";
+    final Pattern msgPattern = Pattern.compile(msgRegex);
 
     @Override
     public void handleMessage(WebSocketSession webSocketSession, WebSocketMessage<?> webSocketMessage) throws Exception {
@@ -41,7 +39,7 @@ public class Sc2tvWebsocketHandler implements WebSocketHandler {
         } else if (payload.startsWith("0")) {
             // handshake
             log.debug(webSocketMessage.getPayload().toString());
-            webSocketSession.sendMessage(new TextMessage("422[\"/chat/join\",{\"channel\":\"stream/56592\"}]"));
+            webSocketSession.sendMessage(new TextMessage("422[\"/chat/join\",{\"channel\":\"" + channelId + "\"}]"));
         } else if (payload.startsWith("42")) {
             log.debug(webSocketMessage.getPayload().toString());
             Matcher m = msgPattern.matcher(payload);
@@ -55,24 +53,6 @@ public class Sc2tvWebsocketHandler implements WebSocketHandler {
         }
     }
 
-    @Override
-    public void handleTransportError(WebSocketSession webSocketSession, Throwable throwable) throws Exception {
-
-    }
-
-    @Override
-    public void afterConnectionClosed(WebSocketSession webSocketSession, CloseStatus closeStatus) throws Exception {
-        isAlive = false;
-    }
-
-    @Override
-    public boolean supportsPartialMessages() {
-        return false;
-    }
-
-    public boolean getIsAlive() {
-        return isAlive;
-    }
 
     public void sendPing() {
         try {
@@ -81,4 +61,5 @@ public class Sc2tvWebsocketHandler implements WebSocketHandler {
             log.info(e.getMessage());
         }
     }
+
 }
