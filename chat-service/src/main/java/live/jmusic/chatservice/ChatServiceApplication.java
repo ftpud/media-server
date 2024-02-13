@@ -4,6 +4,7 @@ import live.jmusic.chatservice.service.ChatMessageHandler;
 import live.jmusic.chatservice.service.core.WebsocketChatService;
 import live.jmusic.chatservice.service.core.goodgame.GoodgameWebsocketHandler;
 import live.jmusic.chatservice.service.core.sc2tv.Sc2tvWebsocketHandler;
+import live.jmusic.chatservice.service.core.twitch.TwitchWebsocketHandler;
 import live.jmusic.chatservice.utils.ExceptionUtil;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.shared.util.ConsoleUtilService;
@@ -34,6 +35,15 @@ public class ChatServiceApplication implements ApplicationRunner {
     @Value("${media.chat.gg.ws.url}")
     private String GG_URL;
 
+    @Value("${media.chat.twitch.ws.url}")
+    private String TWITCH_URL;
+
+    @Value("${media.chat.twitch.username}")
+    private String twitchUsername;
+
+    @Value("${media.chat.twitch.password}")
+    private String twitchPassword;
+
     @Autowired
     WebsocketChatService chatService;
 
@@ -48,9 +58,15 @@ public class ChatServiceApplication implements ApplicationRunner {
 
         List<String> sc2tvModers = Arrays.asList("bober12", "tdsfog", "Акимотыч");
         List<String> ggModers = Arrays.asList("ftpud", "Arimas48");
+        List<String> twitchModers = Arrays.asList("ftpud00");
 
         startChatListener("Sc2tv", () -> chatService.run(SC2TV_URL, new Sc2tvWebsocketHandler("stream/56592", new ChatMessageHandler(restRequestService, consoleUtilService, sc2tvModers))));
         startChatListener("Goodgame", () -> chatService.run(GG_URL, new GoodgameWebsocketHandler("196745", new ChatMessageHandler(restRequestService, consoleUtilService, ggModers))));
+        startChatListener("Twitch", () -> chatService.run(TWITCH_URL, new TwitchWebsocketHandler(
+                twitchUsername,
+                twitchPassword,
+                twitchUsername,
+                new ChatMessageHandler(restRequestService, consoleUtilService, twitchModers))));
 
         // Sleep
         Thread.currentThread().join();

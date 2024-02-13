@@ -25,21 +25,21 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         this.moderatorsList = moderatorsList;
 
         registerEvent("^!select (.+)$",
-                r -> select(r.group(1)), this::everyone);
+                r -> select(r.group(1)), this::isModerator);
         registerEvent("^!q (.+)$",
                 r -> enqueue(r.group(1)), this::everyone);
         registerEvent("^!qq (.+)$",
-                r -> enqueueAll(r.group(1)), this::everyone);
+                r -> enqueueAll(r.group(1)), this::isModerator);
         registerEvent("^!next$",
-                r -> next(), this::everyone);
+                r -> next(), this::isModerator);
         registerEvent("^!play (.+)$",
-                r -> play(r.group(1)), this::everyone);
+                r -> play(r.group(1)), this::isModerator);
         registerEvent("^!search (.+)$",
                 r -> search(r.group(1)), this::everyone);
         registerEvent("^!time ([0-9]?[0-9]:[0-9][0-9])$",
-                r -> seek(r.group(1)), this::everyone);
+                r -> seek(r.group(1)), this::isModerator);
         registerEvent("^!time ([0-9]?[0-9]:[0-9][0-9]:[0-9][0-9])$",
-                r -> seek(r.group(1)), this::everyone);
+                r -> seek(r.group(1)), this::isModerator);
 
         registerEvent("^!youtube-dl ([^ ]+?) (.+)$",
                 r -> {
