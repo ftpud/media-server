@@ -9,6 +9,7 @@ import live.jmusic.shared.model.MediaItem;
 import live.jmusic.mediaservice.service.ChronoService;
 import live.jmusic.shared.rest.RestRequestService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -157,15 +158,28 @@ public class MediaController {
     LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
 
     private List<MediaItem> searchAll(String query, int limit) {
-        return mediaRepository
-                .findAll()
-                .stream()
-                .filter(i -> Arrays.stream(query.split("[ ]")).allMatch(token -> i.getFullpath().concat(i.getTags().stream().collect(Collectors.joining(" "))).toLowerCase().contains(token.toLowerCase())))
-                .sorted(
-                        Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).getTitle().toLowerCase(), query.toLowerCase()))
-                )
-                .limit(limit)
-                .collect(Collectors.toList());
+        if (query.startsWith("/") && query.endsWith("/")) {
+           final String token = query.substring(1, query.length() - 1);
+            return mediaRepository
+                    .findAll()
+                    .stream()
+                    .filter(i -> i.getFullpath().concat(i.getTags().stream().collect(Collectors.joining(" "))).toLowerCase().matches(".*" + token + ".*"))
+                    .sorted(
+                            Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).getTitle().toLowerCase(), token.toLowerCase()))
+                    )
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        } else {
+            return mediaRepository
+                    .findAll()
+                    .stream()
+                    .filter(i -> Arrays.stream(query.split("[ ]")).allMatch(token -> i.getFullpath().concat(i.getTags().stream().collect(Collectors.joining(" "))).toLowerCase().contains(token.toLowerCase())))
+                    .sorted(
+                            Comparator.comparingDouble(i -> levenshteinDistance.apply(((MediaItem) i).getTitle().toLowerCase(), query.toLowerCase()))
+                    )
+                    .limit(limit)
+                    .collect(Collectors.toList());
+        }
     }
 
     private List<MediaItem> listNext(int limit) {
