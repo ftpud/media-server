@@ -60,26 +60,26 @@ public class ChatServiceApplication implements ApplicationRunner {
         List<String> ggModers = Arrays.asList("ftpud", "Arimas48");
         List<String> twitchModers = Arrays.asList("ftpud00");
 
-        startChatListener("Sc2tv", () -> chatService.run(SC2TV_URL, new Sc2tvWebsocketHandler("stream/56592", new ChatMessageHandler(restRequestService, consoleUtilService, sc2tvModers))));
-        startChatListener("Goodgame", () -> chatService.run(GG_URL, new GoodgameWebsocketHandler("196745", new ChatMessageHandler(restRequestService, consoleUtilService, ggModers))));
+        startChatListener("Sc2tv", () -> chatService.run(SC2TV_URL, new Sc2tvWebsocketHandler("stream/56592", new ChatMessageHandler(restRequestService, consoleUtilService, sc2tvModers))), 1000 * 60 * 5);
+        startChatListener("Goodgame", () -> chatService.run(GG_URL, new GoodgameWebsocketHandler("196745", new ChatMessageHandler(restRequestService, consoleUtilService, ggModers))), 60000);
         startChatListener("Twitch", () -> chatService.run(TWITCH_URL, new TwitchWebsocketHandler(
                 twitchUsername,
                 twitchPassword,
                 twitchUsername,
-                new ChatMessageHandler(restRequestService, consoleUtilService, twitchModers))));
+                new ChatMessageHandler(restRequestService, consoleUtilService, twitchModers))), 60000);
 
         // Sleep
         Thread.currentThread().join();
     }
 
 
-    private void startChatListener(String chatName, Runnable runnable) {
+    private void startChatListener(String chatName, Runnable runnable, int reconnectDelay) {
         Runnable r = () -> {
             while (true) {
                 log.info("Connecting to " + chatName);
                 ExceptionUtil.recoverable(runnable::run);
                 log.info(chatName + " connection failure");
-                ExceptionUtil.recoverable(() -> Thread.sleep(1000 * 60 * 5));
+                ExceptionUtil.recoverable(() -> Thread.sleep(reconnectDelay));
             }
         };
 
