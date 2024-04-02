@@ -34,6 +34,8 @@ public class BalanceServiceApplication implements ApplicationRunner {
     private String OUTPUT_PIPE2;
     private boolean useFirstPipe = true;
 
+    static int streamIdValue = 3;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
 
@@ -48,6 +50,10 @@ public class BalanceServiceApplication implements ApplicationRunner {
     ////////////////
 
     public static void processFile(String inputPath, String outputPath) {
+        streamIdValue++;
+        if (streamIdValue == 65000) {
+            streamIdValue = 4;
+        }
 
         try (
                 FileInputStream inputFileStream = new FileInputStream(inputPath);
@@ -117,6 +123,8 @@ public class BalanceServiceApplication implements ApplicationRunner {
                 int dataSize = (dataInputStream.readUnsignedByte() << 16) | (dataInputStream.readUnsignedByte() << 8) | dataInputStream.readUnsignedByte();
                 int timeStamp = dataInputStream.readUnsignedByte() | (dataInputStream.readUnsignedByte() << 8) | (dataInputStream.readUnsignedByte() << 16) | (dataInputStream.readUnsignedByte() << 24);
                 int streamID = dataInputStream.readUnsignedByte() | (dataInputStream.readUnsignedByte() << 8) | (dataInputStream.readUnsignedByte() << 16);
+
+                streamID = streamIdValue;
 
                 byte[] tagData = new byte[dataSize];
                 dataInputStream.readFully(tagData);
