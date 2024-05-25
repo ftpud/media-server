@@ -1,6 +1,5 @@
 package live.jmusic.chatservice.service;
 
-import ch.qos.logback.core.util.FileUtil;
 import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.shared.util.ConsoleUtilService;
@@ -52,9 +51,6 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
 
         registerEvent("^!list$",
                 r -> list(), this::everyone);
-
-        registerEvent("^!setlist$",
-                r -> setlist(), this::everyone);
 
         registerEvent("^!setlist$",
                 r -> setlist(), this::everyone);
