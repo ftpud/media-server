@@ -68,9 +68,10 @@ public class BalanceServiceApplication implements ApplicationRunner {
 
             while ((bytesRead = dataInputStream.read(buffer)) != -1) {
                 dataOutputStream.write(buffer, 0, bytesRead);
-                dataOutputStream.flush();
+                //dataOutputStream.flush();
             }
 
+            // dataOutputStream.flush();
             // Close streams
             dataInputStream.close();
             dataOutputStream.close();
@@ -91,7 +92,7 @@ public class BalanceServiceApplication implements ApplicationRunner {
             // Read and process FLV file header
             byte[] headerBuffer = new byte[9];
             dataInputStream.readFully(headerBuffer);
-            processFLVHeader(headerBuffer);
+            // processFLVHeader(headerBuffer);
 
             // Write FLV file header to the output stream
             dataOutputStream.write(headerBuffer);
