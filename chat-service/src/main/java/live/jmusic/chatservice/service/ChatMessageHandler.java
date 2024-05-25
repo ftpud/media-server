@@ -1,13 +1,14 @@
 package live.jmusic.chatservice.service;
 
+import ch.qos.logback.core.util.FileUtil;
 import live.jmusic.shared.model.MediaItem;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.shared.util.ConsoleUtilService;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.StringJoiner;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -51,6 +52,18 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
 
         registerEvent("^!list$",
                 r -> list(), this::everyone);
+
+        registerEvent("^!setlist$",
+                r -> setlist(), this::everyone);
+
+        registerEvent("^!setlist$",
+                r -> setlist(), this::everyone);
+
+        registerEvent("^!setlist ([0-9]+)$",
+                r -> setlist(Integer.parseInt(r.group(1))), this::isModerator);
+
+        registerEvent("^!setlist ([^0-9].+)$",
+                r -> setlist(r.group(1)), this::isModerator);
 
         registerEvent("^\\+(.+)$",
                 r -> addTag(r.group(1)), this::isModerator);
@@ -150,9 +163,95 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         });
     }
 
+    private Map<String, String> getSetList(String song) {
+
+        Map<String, String> setList = new LinkedHashMap<>();
+
+        String setlistFile = song.replaceFirst("[.][^.]+$", "").concat(".setlist");
+        if (Files.exists(Path.of(setlistFile))) {
+            try {
+                List<String> songNames = Files.readAllLines(Path.of(setlistFile));
+
+                for (int n = 0; n < songNames.size(); n++) {
+                    var split = songNames.get(n).split(" ", 2);
+                    setList.put(split[0], split[1]);
+                }
+
+            } catch (Exception e) {
+                log.error(e.toString());
+            }
+        }
+
+        return setList;
+    }
+
+    private void setlist() {
+        restRequestService.requestNow(i -> {
+            String file = i.getMediaItem().getFullpath();
+            Map<String, String> setList = getSetList(file);
+            if (setList.isEmpty()) {
+                restRequestService.sendLiveMessage("Setlist is not found");
+            } else {
+                String out = "";
+
+                var setListArr = setList.entrySet().toArray();
+
+                for (int pos = 0; pos < setListArr.length; pos++) {
+                    var e = (Map.Entry) setListArr[pos];
+                    String s = String.format("%1$3s ", pos) + String.format(" %1$10s", e.getKey()) + " - " + e.getValue();
+                    out += s + "\n";
+
+                    log.info(pos + " -- " + e.getKey() + " -- " + e.getValue());
+                }
+
+                restRequestService.sendLiveMessage(out);
+            }
+        });
+    }
+
+    private void setlist(int num) {
+        restRequestService.requestNow(i -> {
+            String file = i.getMediaItem().getFullpath();
+            Map<String, String> setList = getSetList(file);
+            if (setList.isEmpty()) {
+                restRequestService.sendLiveMessage("Setlist is not found");
+            } else {
+                //restRequestService.sendLiveMessage(setList.entrySet().stream().map(e -> String.format("%1$" + 10 + "s", e.getKey()) + " - " + e.getValue()).collect(Collectors.joining("\n")));
+                if (num < setList.size()) {
+                    Map.Entry<String, String> entry = (Map.Entry<String, String>) (setList.entrySet().toArray()[num]);
+                    seek(entry.getKey());
+                } else {
+                    // nothing found
+                    restRequestService.sendLiveMessage("Nothing found");
+                }
+            }
+        });
+    }
+
+    private void setlist(String text) {
+        restRequestService.requestNow(i -> {
+            String file = i.getMediaItem().getFullpath();
+            Map<String, String> setList = getSetList(file);
+            if (setList.isEmpty()) {
+                restRequestService.sendLiveMessage("Setlist is not found");
+            } else {
+
+                for (Map.Entry<String, String> entry : setList.entrySet()) {
+                    if (entry.getValue().toLowerCase().contains(text.toLowerCase())) {
+                        seek(entry.getKey());
+                        return;
+                    }
+                }
+
+                // nothing found
+                restRequestService.sendLiveMessage("Nothing found");
+            }
+        });
+    }
+
     private void viewTags() {
         restRequestService.listTags(i ->
-            restRequestService.sendLiveMessage(Arrays.stream(i).collect(Collectors.joining(", ")))
+                restRequestService.sendLiveMessage(Arrays.stream(i).collect(Collectors.joining(", ")))
         );
     }
 
