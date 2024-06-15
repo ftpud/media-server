@@ -140,7 +140,7 @@ public class StreamService {
 
     private String getAudioFilter(MediaItem item) {
         if (isNotEmpty(item.getVolume())) {
-            return "volume=" + (-10 - Float.parseFloat(item.getVolume())) + "dB";
+            return "volume=" + (-27 - Float.parseFloat(item.getVolume())) + "dB";
         }
         return "volume=1";
     }
