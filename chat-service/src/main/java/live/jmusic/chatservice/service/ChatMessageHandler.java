@@ -30,6 +30,8 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
                 r -> enqueue(r.group(1)), this::everyone);
         registerEvent("^!qq (.+)$",
                 r -> enqueueAll(r.group(1)), this::isModerator);
+        registerEvent("^!random (.+)$",
+                r -> random(r.group(1)), this::isModerator);
         registerEvent("^!next$",
                 r -> next(), this::isModerator);
         registerEvent("^!play (.+)$",
@@ -128,6 +130,17 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         restRequestService.requestSearch(item, i ->
         {
             Arrays.stream(i).forEach(mi -> enqueue(mi.getFullpath()));
+        });
+    }
+
+
+    Random random = new Random();
+
+    private void random(String item) {
+        restRequestService.requestSearch(item, i ->
+        {
+            int rnd = random.nextInt(i.length);
+            play(i[rnd].fullpath);
         });
     }
 
