@@ -5,7 +5,6 @@ import live.jmusic.shared.model.RotationItem;
 import live.jmusic.shared.rest.RestRequestService;
 import live.jmusic.streamservice.util.FfmpegHelper;
 import live.jmusic.streamservice.util.SubtitlesService;
-import live.jmusic.streamservice.util.videofilter.VideoFilterBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,7 +72,7 @@ public class StreamService {
 
             String vf = FfmpegHelper.buildVideoFilter(currentItem, subtitlesFilter, liveFile);
             String volume = getAudioFilter(currentItem.getMediaItem());
-            restRequestService.sendLiveMessage("Loaded with: " + volume);
+            //restRequestService.sendLiveMessage("Loaded with: " + volume);
 
 
             if ("prod".equals(profile)) {
@@ -140,7 +139,7 @@ public class StreamService {
 
     private String getAudioFilter(MediaItem item) {
         if (isNotEmpty(item.getVolume())) {
-            return "volume=" + (-27 - Float.parseFloat(item.getVolume())) + "dB";
+            return "volume=" + (-10 - Float.parseFloat(item.getVolume())) + "dB";
         }
         return "volume=1";
     }
