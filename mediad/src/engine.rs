@@ -97,6 +97,8 @@ pub struct Engine {
     late_frames: i64,
     next_took_video: bool, // did the incoming track advance its video this tick (crossfade)?
     afifo: [std::collections::VecDeque<f32>; 2], // output samples not yet cut into encoder frames
+    snap: Option<(filter::Graph, encoder::Video)>,
+    last_snap: Instant,
 }
 
 impl Engine {
@@ -152,6 +154,8 @@ impl Engine {
             filler_v: None, filler_a: None, post: None, overlay, last: None, ending_sent: false, idle: false, late_frames: 0,
             next_took_video: false,
             afifo: [std::collections::VecDeque::new(), std::collections::VecDeque::new()],
+            snap: None,
+            last_snap: Instant::now(),
         };
         e.post = e.post_graph()?;
         Ok(e)
@@ -256,6 +260,41 @@ impl Engine {
         Ok(Some(g))
     }
 
+    /// Small JPEG of what is on air (for the dashboard), 480x270.
+    fn snapshot(&mut self, f: &frame::Video) -> Result<()> {
+        if self.snap.is_none() {
+            let mut g = filter::Graph::new();
+            let pix = if self.cfg.src.qsv { ffmpeg::ffi::AVPixelFormat::AV_PIX_FMT_NV12 } else { ffmpeg::ffi::AVPixelFormat::AV_PIX_FMT_YUV420P };
+            g.add(&filter::find("buffer").unwrap(), "in",
+                &format!("video_size={}x{}:pix_fmt={}:time_base=1/{FPS}:pixel_aspect=1/1", self.cfg.src.w, self.cfg.src.h, pix as i32))?;
+            g.add(&filter::find("buffersink").unwrap(), "out", "")?;
+            g.output("in", 0)?.input("out", 0)?.parse("scale=480:270,format=yuvj420p")?;
+            g.validate()?;
+            let codec = encoder::find(codec::Id::MJPEG).ok_or_else(|| anyhow!("no mjpeg encoder"))?;
+            let mut e = codec::context::Context::new_with_codec(codec).encoder().video()?;
+            e.set_width(480);
+            e.set_height(270);
+            e.set_format(format::Pixel::YUVJ420P);
+            e.set_time_base(Rational(1, FPS));
+            let mut o = Dictionary::new();
+            o.set("q:v", "5");
+            self.snap = Some((g, e.open_with(o)?));
+        }
+        let (g, enc) = self.snap.as_mut().unwrap();
+        let mut src = f.clone();
+        src.set_pts(Some(self.vpts));
+        g.get("in").unwrap().source().add(&src)?;
+        let mut small = frame::Video::empty();
+        g.get("out").unwrap().sink().frame(&mut small)?;
+        small.set_pts(Some(self.vpts));
+        enc.send_frame(&small)?;
+        let mut pkt = ffmpeg::Packet::empty();
+        if enc.receive_packet(&mut pkt).is_ok() {
+            if let Some(d) = pkt.data() { *self.sh.snapshot.lock().unwrap() = d.to_vec(); }
+        }
+        Ok(())
+    }
+
     /// Show a track title (engine thread only).
     fn set_title(&mut self, title: &str) {
         let Some(g) = self.post.as_mut() else { return };
@@ -328,6 +367,10 @@ impl Engine {
             if g.get("out").unwrap().sink().frame(&mut o).is_ok() { f = o; }
         }
         self.blend_overlay(&mut f);
+        if self.last_snap.elapsed() >= Duration::from_secs(2) {
+            self.last_snap = Instant::now();
+            if let Err(e) = self.snapshot(&f) { eprintln!("snapshot failed: {e:#}"); }
+        }
         f.set_pts(Some(self.vpts));
         self.vpts += 1;
         f.set_kind(if self.force_key { ffmpeg::picture::Type::I } else { ffmpeg::picture::Type::None });

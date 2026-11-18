@@ -410,3 +410,20 @@ impl Handle {
     pub fn audio_lag_ms(&self) -> i64 { self.debt * 1000 / RATE as i64 }
 
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sanitize_keeps_unicode_and_escapes_drawtext_specials() {
+        assert_eq!(sanitize("≫　UtaGe／夢鯨"), "≫　UtaGe／夢鯨");
+        assert_eq!(sanitize("100% it's"), "100\\% it\u{2019}s");
+        assert_eq!(sanitize("a\\b\nc"), "abc");
+    }
+
+    #[test]
+    fn esc_path_escapes_filter_specials() {
+        assert_eq!(esc_path("/tmp/a:b's.srt"), "/tmp/a\\:b\\'s.srt");
+    }
+}

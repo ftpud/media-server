@@ -235,6 +235,16 @@ public class ApiController {
         return proxy(MEDIAD + "/events?since=" + since + "&wait=" + Math.min(wait, 25000), null);
     }
 
+    @GetMapping(value = "/stream/snapshot", produces = MediaType.IMAGE_JPEG_VALUE)
+    public ResponseEntity<byte[]> snapshot() {
+        try {
+            byte[] img = http.getForObject(MEDIAD + "/snapshot.jpg", byte[].class);
+            return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store").contentType(MediaType.IMAGE_JPEG).body(img);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
     @GetMapping("/stream/upcoming")
     public ResponseEntity<String> upcoming() {
         return proxy(MEDIA + "/media/list", null);

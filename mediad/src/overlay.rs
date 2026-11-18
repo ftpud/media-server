@@ -70,3 +70,23 @@ pub fn listen(cfg: &OverlayCfg) -> std::io::Result<Latest> {
     });
     Ok(latest)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_overlay_geometry() {
+        let c = OverlayCfg::parse("127.0.0.1:8096:600x220+1290+40").unwrap();
+        assert_eq!((c.addr.as_str(), c.w, c.h, c.x, c.y), ("127.0.0.1:8096", 600, 220, 1290, 40));
+        assert!(OverlayCfg::parse("garbage").is_none());
+    }
+
+    #[test]
+    fn converts_white_and_black_to_limited_range() {
+        let f = convert(&[255, 255, 255, 255, 0, 0, 0, 128], 2, 1);
+        assert!((233..=236).contains(&f.y[0]), "white Y={}", f.y[0]);
+        assert_eq!(f.y[1], 16);
+        assert_eq!((f.a[0], f.a[1]), (255, 128));
+    }
+}

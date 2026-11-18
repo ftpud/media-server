@@ -17,6 +17,23 @@ use anyhow::{anyhow, Result};
 use api::{Shared, TrackReq};
 use engine::{Cfg, Engine};
 
+/// Optional `mediad.conf` in the working directory: KEY=VALUE lines (e.g. MEDIAD_OVERLAY=...),
+/// applied as environment variables unless already set. Lets settings change without touching
+/// the (root-owned) launcher script.
+fn load_conf(path: &str) {
+    let Ok(text) = std::fs::read_to_string(path) else { return };
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') { continue; }
+        if let Some((k, v)) = line.split_once('=') {
+            if std::env::var_os(k.trim()).is_none() {
+                std::env::set_var(k.trim(), v.trim());
+                eprintln!("config: {}={}", k.trim(), v.trim());
+            }
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let (mut out, mut enc, mut port, mut hwdec) = (None, "x264".to_string(), "8095".to_string(), true);
@@ -33,6 +50,7 @@ fn main() -> Result<()> {
         }
     }
     let out = out.ok_or_else(|| anyhow!("--out required"))?;
+    load_conf("mediad.conf");
     ffmpeg_next::init()?;
     let env_u32 = |k: &str, d: u32| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
     let cfg = Cfg {

@@ -182,6 +182,13 @@ async function refreshStream() {
   if (s.queue && s.queue.length) b.push(`<span class="badge">queued ${s.queue.length}</span>`);
   $('#nowBadges').innerHTML = b.join('');
 }
+async function refreshPreview() {
+  const img = $('#preview');
+  const next = new Image();
+  next.onload = () => { img.src = next.src; img.classList.remove('hidden'); };
+  next.onerror = () => img.classList.add('hidden');
+  next.src = '/api/stream/snapshot?t=' + Date.now();
+}
 async function refreshUpcoming() {
   try {
     const items = await api('/api/stream/upcoming');
@@ -294,6 +301,7 @@ async function start() {
   every(refreshHost, 5000);
   every(refreshStream, 1000);
   every(refreshUpcoming, 10000);
+  every(refreshPreview, 3000);
   eventLoop();
 }
 api('/api/system').then(() => start()).catch(() => {});

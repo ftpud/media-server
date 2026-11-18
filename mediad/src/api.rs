@@ -46,6 +46,7 @@ pub struct Shared {
     pub av_ms: AtomicI64,
     pub late_frames: AtomicI64,
     pub track_lag_ms: AtomicI64,
+    pub snapshot: Mutex<Vec<u8>>,
     pub started: Instant,
 }
 
@@ -62,6 +63,7 @@ impl Shared {
             av_ms: AtomicI64::new(0),
             late_frames: AtomicI64::new(0),
             track_lag_ms: AtomicI64::new(0),
+            snapshot: Mutex::new(Vec::new()),
             started: Instant::now(),
         })
     }
@@ -132,6 +134,14 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
     let num = |k: &str, d: i64| p.get(k).and_then(|v| v.parse().ok()).unwrap_or(d);
     match path {
         "/health" => respond(s, "200 OK", &json!({"status": "UP"})),
+        "/snapshot.jpg" => {
+            let img = sh.snapshot.lock().unwrap().clone();
+            if img.is_empty() {
+                return respond(s, "404 Not Found", &json!({"error": "no snapshot yet"}));
+            }
+            let _ = write!(s, "HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {}\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n", img.len());
+            let _ = s.write_all(&img);
+        }
         "/load" => {
             let Some(pa) = p.get("path").filter(|v| !v.is_empty()) else {
                 return respond(s, "400 Bad Request", &json!({"error": "path required"}));
@@ -216,4 +226,27 @@ pub fn serve(sh: Arc<Shared>, addr: &str) -> std::io::Result<()> {
         }
     });
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn urldecode_handles_utf8_plus_and_bad_escapes() {
+        assert_eq!(urldecode("a%20b+c"), "a b c");
+        assert_eq!(urldecode("%E2%89%AB%E3%80%80UtaGe"), "≫　UtaGe");
+        assert_eq!(urldecode("100%"), "100%");
+        assert_eq!(urldecode("%zz"), "%zz");
+        assert_eq!(urldecode("%2B"), "+");
+    }
+
+    #[test]
+    fn query_parses_pairs() {
+        let q = query("path=%2Fa%20b.mp4&start_ms=1500&now=1&empty=");
+        assert_eq!(q["path"], "/a b.mp4");
+        assert_eq!(q["start_ms"], "1500");
+        assert_eq!(q["now"], "1");
+        assert_eq!(q["empty"], "");
+    }
 }

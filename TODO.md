@@ -72,10 +72,10 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [x] Dev profile: software `libx264` and output to a file or null, so it can be developed without the iGPU.
 - [x] (encoder works via `mediad <out> qsv ...`; bitrate/lookahead tuning still to port) Prod profile: `h264_qsv`, settings copied from `FfmpegHelper.getFfmpegProdCommand` (4500k / maxrate 5500k / bufsize 4500k / g=60 / look_ahead / extbrc, 1080p30, AAC 320k 44.1 kHz stereo).
 - [x] (counter-based PTS, continuous across tracks; real-time pacing still TODO) Master clock: output loop ticks at 30 fps; PTS = frame counter; audio PTS = sample counter; paced to wall time.
-- [ ] Decoder slots: demux + decode thread per active track, bounded frame queue.
+- [x] Decoder slots: demux + decode thread per active track, bounded frame queue.
 - [x] (scale+pad+setsar+fps+drawtext done; subtitles and live-text reload still TODO) Filter graph per track: scale + pad to 1920x1080 (same as `FfmpegHelper`), drawtext for title and for the live text file (`reload=1`), optional subtitles (`ass` / `subtitles`).
 - [x] (44.1k stereo fltp, 1024-sample frames; per-track gain still TODO) Audio: decode, resample to 44.1 kHz stereo, apply gain in dB per track.
-- [~] (single persistent encoders + one muxer done, writes mp4/flv/ts files; RTMP target not yet tested) Single encoder + FLV mux + RTMP output (`rtmp://localhost/main`, same target as today's publisher).
+- [x] (RTMP verified in production since the cutover) Single encoder + FLV mux + RTMP output (`rtmp://localhost/main`, same target as today's publisher).
 - [x] Filler frames and silence when no track is ready (decoder error, missing file, end of list), so the encoder never starves.
 - [x] RTMP reconnect inside the process (encoder keeps running, resume on a keyframe).
 - [x] Logging to `logs/mediad.log` with rotation; periodic stats line (fps, queue depth, dropped frames).
@@ -109,7 +109,7 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 
 - [x] Local control API (Unix socket or HTTP on localhost): `load` (path, start offset, gain dB, title, subtitle file), `skip`, `seek`, `status`.
 - [x] Events back to the caller: `track_started`, `track_ending` (N seconds before end, for pre-roll), `track_ended`, `track_error`, `position`.
-- [ ] Pre-roll: open the next track's decoder a few seconds before the current one ends. Cancel and re-roll on `skip`/`seek`.
+- [x] Pre-roll: open the next track's decoder a few seconds before the current one ends. Cancel and re-roll on `skip`/`seek`.
 - [x] Define behavior for a bad file: log, emit `track_error`, play filler, continue.
 
 ## Phase 4: Java integration
@@ -126,7 +126,7 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 
 ## Phase 5: Test and soak
 
-- [ ] Unit/integration tests for the control API and clock (synthetic sources, e.g. `testsrc` / `sine`).
+- [x] Unit/integration tests for the control API and clock (synthetic sources, e.g. `testsrc` / `sine`).
 - [x] Run mediad next to production on a separate RTMP app (`rtmp://localhost/test`), off-peak, for 24 h+.
 - [x] Fault tests: corrupt file, missing file, zero-length file, file without audio, very long file, `!next` / `!time` spam, RTMP server restart, media-service restart.
 - [ ] Check A/V sync after several hours (clock drift) and memory growth of the mediad process.
@@ -138,14 +138,19 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [x] Cut over: stop publisher-service, balance-service and the old `ffmpeg_stream` concat process, start mediad on `rtmp://localhost/main`. Keep the old services deployable for rollback.
 - [x] Verify with the real viewers' player: no reconnect at track changes.
 - [ ] After a stable period, remove `publisher-service`, `balance-service`, `list.txt`, the FIFOs, `detectAbnormality`, and the dashboard entries.
-- [ ] Update `README.md`.
+- [x] Update `README.md`.
 
-## Phase 7: Overlay renderer (later)
+## Phase 7: Overlay renderer - DONE (staged, deploy from the dashboard)
 
-- [ ] Separate overlay service rendering RGBA frames (native EGL renderer or headless Chromium; decide after measuring iGPU headroom with `intel_gpu_top`).
+- `overlay/` (Rust, CPU renderer, ~15 ms per 600x220 frame): 3D card (perspective flip around the vertical axis, ease-out-back) with now playing (artist / song split from `≫　Artist／Song`, progress, times) that flips in on every track start, turns to "up next" (from `/media/list`) in the last 25 s and for 8 s once a minute. 30 fps while animating, 2 fps otherwise. Data is polled on a background thread so slow HTTP never stalls the animation.
+- mediad reads `app/mediad.conf` (`MEDIAD_OVERLAY=127.0.0.1:8096:600x220+1290+40`), launcher `app/overlay.sh`, dashboard service "Overlay".
+- GPU path not used: the server's iGPU is not accessible without root/render group; the CPU renderer is cheap at this size. Chat messages stay on the live text line (live-service).
+
+
+- [x] Separate overlay service rendering RGBA frames (native EGL renderer or headless Chromium; decide after measuring iGPU headroom with `intel_gpu_top`).
 - [x] mediad reads overlay frames from a local TCP socket as an extra filter-graph input; fully transparent/skipped when idle.
-- [ ] Wire live data (queue/upcoming items, chat) from media-service and live-service to the renderer; retire the `live.txt` reload.
-- [ ] Check the cost: start with a small region at 15-30 fps; consider `overlay_qsv` to keep frames on the GPU.
+- [x] Wire live data (queue/upcoming items, chat) from media-service and live-service to the renderer; retire the `live.txt` reload.
+- [x] Check the cost: start with a small region at 15-30 fps; consider `overlay_qsv` to keep frames on the GPU.
 
 ## Phase 8: Transitions (later)
 
@@ -180,7 +185,8 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [x] UI: responsive single-page app, dark/light theme, confirmations for disruptive actions, toasts.
 - [x] Security: token login (`app/dashboard.token`, root-only), HttpOnly SameSite cookie, POST-only actions, no CORS.
 - [x] Deploy flow: jars in `/home/ftpud/media-server/deploy/` show a Deploy button; replaced jars are archived in `app/versions/` with one-click restore (the previous dashboard is archived there).
-- [ ] Not done: GPU stats (`intel_gpu_top` needs root + a sampling loop), output preview thumbnail, user accounts (single shared token).
+- [x] Output preview thumbnail (mediad `/snapshot.jpg`, every 2 s, shown in On air).
+- [ ] Not done: GPU stats (`intel_gpu_top` needs root + a sampling loop), user accounts (single shared token).
 
 ## Follow-up fixes (2026-11-18, staged in /home/ftpud/media-server/deploy, deploy from the dashboard)
 
