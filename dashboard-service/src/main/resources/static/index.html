@@ -1,54 +1,124 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom Dark Dashboard</title>
-    <!-- Include Material Design CSS -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.blue_grey-amber.min.css">
-    <!-- Include jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <!-- Include Material Design JS -->
-    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
-    <!-- Include custom script -->
-    <script defer src="script.js"></script>
-    <style>
-        #logPopup {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #263238; /* Updated background color */
-            color: white; /* White text color */
-            z-index: 1000;
-            overflow-y: auto;
-        }
-        #logPopupContent {
-            margin: 20px;
-        }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Media Server</title>
+<link rel="stylesheet" href="style.css">
 </head>
-<body class="mdl-color--blue-grey-900">
+<body>
 
-<div class="mdl-grid">
-    <div class="mdl-cell mdl-cell--12-col">
-        <!-- Service Blocks will be appended here -->
-        <div id="serviceBlocks" class="mdl-grid"></div>
-    </div>
+<!-- login -->
+<div id="login" class="login hidden">
+  <form id="loginForm" class="login-card">
+    <div class="brand big"><span class="logo">▶</span> Media Server</div>
+    <p class="muted">Enter the dashboard token (file <code>dashboard.token</code> in the app directory).</p>
+    <input id="tokenInput" type="password" placeholder="Token" autocomplete="current-password" autofocus>
+    <button class="btn primary" type="submit">Sign in</button>
+    <div id="loginError" class="error"></div>
+  </form>
 </div>
 
-<!-- Popup block for viewing logs -->
-<div id="logPopup">
-    <div id="logPopupContent">
-        <div class="mdl-dialog__content" id="logContent"></div>
-        <div class="mdl-dialog__actions">
-            <button type="button" class="mdl-button mdl-js-button mdl-js-ripple-effect" onclick="closeLogPopup()">Close</button>
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="brand"><span class="logo">▶</span> Media Server</div>
+    <div class="chips" id="hostChips"></div>
+    <div class="top-actions">
+      <button class="icon-btn" id="themeBtn" title="Toggle theme">◐</button>
+      <button class="icon-btn" id="logoutBtn" title="Sign out">⎋</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <!-- on air -->
+    <section class="card onair span-2">
+      <div class="card-head">
+        <h2>On air</h2>
+        <span id="liveBadge" class="badge">…</span>
+      </div>
+      <div class="now">
+        <div id="nowTitle" class="now-title">—</div>
+        <div class="progress"><div id="nowBar" class="bar"></div></div>
+        <div class="now-meta">
+          <span id="nowTime" class="mono">0:00 / 0:00</span>
+          <span id="nowBadges" class="badges"></span>
         </div>
-    </div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" id="nextBtn">⏭ Next track</button>
+        <form id="seekForm" class="inline">
+          <input id="seekInput" placeholder="m:ss" size="7">
+          <button class="btn" type="submit">Seek</button>
+        </form>
+        <form id="msgForm" class="inline grow">
+          <input id="msgInput" placeholder="On-screen message…" class="grow">
+          <button class="btn" type="submit">Show</button>
+        </form>
+      </div>
+      <form id="searchForm" class="inline search">
+        <input id="searchInput" placeholder="Search the library (words, or /regex/)…" class="grow">
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <ul id="searchResults" class="list results"></ul>
+    </section>
+
+    <!-- up next -->
+    <section class="card">
+      <div class="card-head"><h2>Up next</h2><span class="muted small" id="upcomingInfo"></span></div>
+      <ol id="upcoming" class="list numbered"></ol>
+    </section>
+
+    <!-- services -->
+    <section class="card span-2">
+      <div class="card-head"><h2>Services</h2><span class="muted small" id="svcInfo"></span></div>
+      <div id="services" class="services"></div>
+    </section>
+
+    <!-- activity -->
+    <section class="card">
+      <div class="card-head"><h2>Activity</h2><span class="muted small">mediad events</span></div>
+      <ul id="events" class="list events"></ul>
+    </section>
+
+    <!-- server -->
+    <section class="card span-3">
+      <div class="card-head"><h2>Server</h2><span class="muted small" id="hostInfo"></span></div>
+      <div id="disks" class="disks"></div>
+    </section>
+  </main>
 </div>
 
+<!-- log drawer -->
+<aside id="drawer" class="drawer hidden">
+  <div class="drawer-head">
+    <div>
+      <h2 id="drawerTitle">Logs</h2>
+      <div id="drawerFiles" class="tabs"></div>
+    </div>
+    <button class="icon-btn" id="drawerClose" title="Close">✕</button>
+  </div>
+  <div class="drawer-tools">
+    <input id="logFilter" placeholder="Filter…" class="grow">
+    <label class="toggle"><input type="checkbox" id="logFollow" checked> Live</label>
+    <label class="toggle"><input type="checkbox" id="logErrors"> Errors only</label>
+    <span id="logInfo" class="muted small"></span>
+  </div>
+  <pre id="logBody" class="logbody"></pre>
+</aside>
+
+<!-- modal -->
+<div id="modal" class="modal hidden">
+  <div class="modal-card">
+    <h3 id="modalTitle"></h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel">Cancel</button>
+      <button class="btn danger" id="modalOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+<script src="app.js"></script>
 </body>
 </html>
