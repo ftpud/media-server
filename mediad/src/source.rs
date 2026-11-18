@@ -15,6 +15,10 @@ pub const RATE: i32 = 44100;
 pub const NB: usize = 1024;
 const VIDEO_BUFFER: usize = 60; // 2 s of decoded video per source
 
+/// Filter graphs with drawtext/subtitles touch FreeType/libass, which crash when two threads
+/// create or destroy fonts at the same time. Graph setup/teardown is rare: serialize it.
+static GRAPH_LOCK: Mutex<()> = Mutex::new(());
+
 #[derive(Clone)]
 pub struct SrcCfg {
     pub w: u32,
@@ -104,7 +108,10 @@ impl Source {
         let rel = ts as f64 * f64::from(self.vtb) - self.anchor_s;
         if rel < -0.001 { return Ok(()); } // before the requested start (keyframe seek)
         f.set_pts(Some((rel / f64::from(self.vtb)).round() as i64));
-        if self.vg.is_none() { self.vg = Some(video_graph(f, self.sar, self.vtb, &self.req, cfg)?); }
+        if self.vg.is_none() {
+            let _g = GRAPH_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+            self.vg = Some(video_graph(f, self.sar, self.vtb, &self.req, cfg)?);
+        }
         let g = self.vg.as_mut().unwrap();
         g.get("in").unwrap().source().add(f)?;
         let mut o = frame::Video::empty();
@@ -193,10 +200,8 @@ fn video_graph(f: &frame::Video, sar: Rational, tb: Rational, req: &TrackReq, cf
     if let Some(s) = &req.subs {
         chain += &format!(",subtitles=filename='{}'", esc_path(s));
     }
-    if std::path::Path::new(&cfg.font).exists() && !req.title.is_empty() {
-        chain += &format!(",drawtext=fontfile={}:text='{}':x=2:y=2:fontsize=24:fontcolor=white:box=1:boxcolor=black:boxborderw=4",
-            cfg.font, sanitize(&req.title));
-    }
+    // the track title is drawn by the engine's post graph (one thread): FreeType is not safe to
+    // use from several decode threads at once (crashed during pre-roll/crossfades)
     chain += if cfg.qsv { ",format=nv12" } else { ",format=yuv420p" };
     g.output("in", 0)?.input("out", 0)?.parse(&chain)?;
     g.validate()?;
@@ -247,6 +252,14 @@ fn open_video_decoder(stream: &format::stream::Stream, hw: bool) -> Result<(ffmp
 }
 
 
+impl Drop for Source {
+    fn drop(&mut self) {
+        let _g = GRAPH_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        self.vg.take();
+        self.ag.take();
+    }
+}
+
 // ======================= threaded handle =======================
 
 struct SendV(frame::Video);
@@ -276,6 +289,14 @@ pub struct Handle {
     pub frames_out: i64,
     pub announced: bool,
     eof: bool,
+    /// samples owed: played as silence while this track's audio was late; dropped when it arrives
+    debt: i64,
+    has_audio: bool,
+    pub audio_frames: i64,
+    q: [VecDeque<f32>; 2],
+    /// output sample index where this track's audio starts = its first video frame * 1470
+    pub start_pos: Option<i64>,
+    pub first_video_at: Option<i64>,
 }
 
 impl Drop for Handle {
@@ -320,7 +341,7 @@ impl Handle {
                 }
             }
         }).expect("spawn source thread");
-        Handle { req, vrx, arx, info, stop, frames_out: 0, announced: false, eof: false }
+        Handle { req, vrx, arx, info, stop, frames_out: 0, announced: false, eof: false, debt: 0, has_audio: true, audio_frames: 0, q: [VecDeque::new(), VecDeque::new()], start_pos: None, first_video_at: None }
     }
 
     pub fn info(&self) -> Option<Info> { self.info.lock().unwrap().as_ref().and_then(|r| r.as_ref().ok().cloned()) }
@@ -341,10 +362,51 @@ impl Handle {
         }
     }
 
-    pub fn audio(&mut self) -> Option<frame::Audio> {
-        match self.arx.try_recv() {
-            Ok(SendA(a)) => Some(a),
-            Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => None,
+    /// Pull decoded audio frames into the sample queue (waits briefly for audio that is just late).
+    fn fill(&mut self, need: usize) {
+        if !self.has_audio { return; }
+        let deadline = Instant::now() + std::time::Duration::from_millis(15);
+        while self.q[0].len() < need + self.debt as usize {
+            let got = match self.arx.try_recv() {
+                Ok(SendA(a)) => Some(a),
+                Err(TryRecvError::Disconnected) => { self.has_audio = false; None }
+                Err(TryRecvError::Empty) => match self.arx.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+                    Ok(SendA(a)) => Some(a),
+                    Err(RecvTimeoutError::Disconnected) => { self.has_audio = false; None }
+                    Err(RecvTimeoutError::Timeout) => None,
+                },
+            };
+            let Some(a) = got else { break };
+            let n = a.samples();
+            for ch in 0..2 { self.q[ch].extend(&a.plane::<f32>(ch)[..n]); }
+            self.audio_frames += 1;
+        }
+        // pay back samples that were played as silence while this track's audio was late
+        let pay = (self.debt as usize).min(self.q[0].len());
+        if pay > 0 {
+            for ch in 0..2 { self.q[ch].drain(..pay); }
+            self.debt -= pay as i64;
         }
     }
+
+    /// This track's contribution to the output samples [pos, pos+n): silence before its start
+    /// position, then its own samples. Missing (late) samples become silence + debt.
+    pub fn take(&mut self, pos: i64, n: usize, out: &mut [Vec<f32>; 2]) {
+        let start = self.start_pos.unwrap_or(i64::MAX);
+        let lead = (start - pos).clamp(0, n as i64) as usize;
+        for ch in 0..2 { out[ch].clear(); out[ch].resize(lead, 0.0); }
+        let want = n - lead;
+        if want == 0 { return; }
+        self.fill(want);
+        let have = self.q[0].len().min(want);
+        for ch in 0..2 {
+            out[ch].extend(self.q[ch].drain(..have));
+            out[ch].resize(n, 0.0);
+        }
+        if have < want && self.has_audio { self.debt += (want - have) as i64; }
+    }
+
+    /// How far this track's audio is behind its video right now (ms).
+    pub fn audio_lag_ms(&self) -> i64 { self.debt * 1000 / RATE as i64 }
+
 }

@@ -31,7 +31,7 @@ public class Registry {
     public Registry() {
         add(new ServiceDef("mediad", "mediad", "stream", "Player + encoder: one persistent ffmpeg pipeline to RTMP",
                 Arrays.asList("./mediad.sh"), Arrays.asList("mediad.sh", "mediad --out"),
-                Arrays.asList("mediad.log"), "http://localhost:8095/health", null, "publisher-service", false));
+                Arrays.asList("mediad.log"), "http://localhost:8095/health", "mediad", "publisher-service", false));
         add(new ServiceDef("stream-service", "Stream service", "stream", "Feeds mediad with the rotation (media.mediad.enabled)",
                 java("stream-service.jar"), Arrays.asList("-jar stream-service.jar", "ffmpeg_stream -threads 1 -init_hw_device"),
                 Arrays.asList("stream-service.log"), "http://localhost:8088/health", "stream-service.jar", null, false));

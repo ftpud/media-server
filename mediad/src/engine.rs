@@ -8,7 +8,7 @@
 //! Output path: [crossfade A/B] -> post graph (zmq, live text) -> overlay -> encoder -> muxer
 use crate::api::{Shared, TrackReq};
 use crate::overlay::{Latest, OverlayCfg};
-use crate::source::{esc_path, Handle, Pull, SrcCfg, FPS, NB, RATE};
+use crate::source::{esc_path, sanitize, Handle, Pull, SrcCfg, FPS, NB, RATE};
 use anyhow::{anyhow, Result};
 use ffmpeg::{codec, encoder, filter, format, frame, ChannelLayout, Dictionary, Rational};
 use ffmpeg_next as ffmpeg;
@@ -95,6 +95,8 @@ pub struct Engine {
     ending_sent: bool,
     idle: bool,
     late_frames: i64,
+    next_took_video: bool, // did the incoming track advance its video this tick (crossfade)?
+    afifo: [std::collections::VecDeque<f32>; 2], // output samples not yet cut into encoder frames
 }
 
 impl Engine {
@@ -148,6 +150,8 @@ impl Engine {
             cfg, sh, octx, venc, aenc, v_idx, a_idx, v_tb, a_tb, vpts: 0, apts: 0, t0: Instant::now(),
             connected: true, last_try: Instant::now(), force_key: false, cur: None, next: None, xfade_from: None,
             filler_v: None, filler_a: None, post: None, overlay, last: None, ending_sent: false, idle: false, late_frames: 0,
+            next_took_video: false,
+            afifo: [std::collections::VecDeque::new(), std::collections::VecDeque::new()],
         };
         e.post = e.post_graph()?;
         Ok(e)
@@ -224,6 +228,10 @@ impl Engine {
         let font = &self.cfg.src.font;
         let have_font = std::path::Path::new(font).exists();
         let mut parts = vec![];
+        if have_font {
+            // track title slot, updated with a filter command when a track starts
+            parts.push(format!("drawtext@title=fontfile={font}:text=' ':x=2:y=2:fontsize=24:fontcolor=white:box=1:boxcolor=black:boxborderw=4"));
+        }
         if let Some(z) = &self.cfg.zmq { parts.push(format!("zmq=bind_address='{}'", z.replace(':', "\\:"))); }
         if let Some(lf) = &self.cfg.live_file {
             // drawtext refuses to start on a missing textfile; the live service creates it later
@@ -246,6 +254,20 @@ impl Engine {
         g.output("in", 0)?.input("out", 0)?.parse(&format!("{},format={fmt}", parts.join(",")))?;
         g.validate()?;
         Ok(Some(g))
+    }
+
+    /// Show a track title (engine thread only).
+    fn set_title(&mut self, title: &str) {
+        let Some(g) = self.post.as_mut() else { return };
+        let text = if title.is_empty() { " ".to_string() } else { sanitize(title) };
+        let target = std::ffi::CString::new("drawtext@title").unwrap();
+        let cmd = std::ffi::CString::new("reinit").unwrap();
+        let Ok(arg) = std::ffi::CString::new(format!("text='{text}'")) else { return };
+        let mut res = [0 as std::os::raw::c_char; 64];
+        let r = unsafe {
+            ffmpeg::ffi::avfilter_graph_send_command(g.as_mut_ptr(), target.as_ptr(), cmd.as_ptr(), arg.as_ptr(), res.as_mut_ptr(), res.len() as i32, 0)
+        };
+        if r < 0 { eprintln!("could not set title ({r})"); }
     }
 
     fn blend_overlay(&self, f: &mut frame::Video) {
@@ -350,34 +372,50 @@ impl Engine {
         Ok(v)
     }
 
-    /// Audio for the frame just emitted: keep apts within one audio frame of vpts.
-    /// `from_source=false` (late/idle tick) emits silence and leaves the sources' audio untouched,
-    /// so their audio stays aligned with their video.
+    /// Audio for the frame just emitted. Output audio is built sample-accurately: each track's
+    /// samples are placed at the output position where its video started, mixed during
+    /// crossfades, and re-cut into 1024-sample encoder frames.
     fn audio_for_tick(&mut self, from_source: bool, mix: Option<f32>) -> Result<()> {
-        while (self.apts as f64) < self.vpts as f64 * RATE as f64 / FPS as f64 {
-            let a = if from_source { self.cur.as_mut().and_then(|s| s.audio()) } else { None };
-            let mut a = match a { Some(a) => a, None => self.silence()? };
-            if let (true, Some(t)) = (from_source, mix) {
-                let b = self.next.as_mut().and_then(|s| s.audio());
-                writable_a(&mut a);
-                if let Some(b) = b {
-                    let n = a.samples().min(b.samples());
-                    for ch in 0..2 {
-                        let bp: Vec<f32> = b.plane::<f32>(ch)[..n].to_vec();
-                        let ap = a.plane_mut::<f32>(ch);
-                        for i in 0..n { ap[i] = ap[i] * (1.0 - t) + bp[i] * t; }
+        let target = self.vpts * (RATE / FPS) as i64; // 1470 samples per video frame
+        let mut a = [Vec::new(), Vec::new()];
+        let mut b = [Vec::new(), Vec::new()];
+        while self.apts + (self.afifo[0].len() as i64) < target {
+            let pos = self.apts + self.afifo[0].len() as i64;
+            let n = (target - pos) as usize;
+            if from_source {
+                match self.cur.as_mut() { Some(c) => c.take(pos, n, &mut a), None => { for ch in 0..2 { a[ch].clear(); a[ch].resize(n, 0.0); } } }
+                if let (Some(t), Some(nx)) = (mix, self.next.as_mut()) {
+                    if nx.start_pos.is_some() {
+                        nx.take(pos, n, &mut b);
+                        for ch in 0..2 { for i in 0..n { a[ch][i] = a[ch][i] * (1.0 - t) + b[ch][i] * t; } }
+                    } else {
+                        for ch in 0..2 { for s in a[ch].iter_mut() { *s *= 1.0 - t; } }
                     }
-                } else {
-                    // next track has no audio (yet): fade the current one out
-                    for ch in 0..2 { for s in a.plane_mut::<f32>(ch).iter_mut() { *s *= 1.0 - t; } }
+                }
+            } else {
+                // late/idle tick: silence, and the sources' audio stays where it is
+                for ch in 0..2 { a[ch].clear(); a[ch].resize(n, 0.0); }
+                for h in [self.cur.as_mut(), self.next.as_mut()].into_iter().flatten() {
+                    if let Some(s) = h.start_pos.as_mut() { *s += n as i64; }
                 }
             }
-            self.emit_audio(a)?;
+            for ch in 0..2 { self.afifo[ch].extend(a[ch].iter()); }
         }
-        let (v_ms, a_ms) = (self.vpts * 1000 / FPS as i64, self.apts * 1000 / RATE as i64);
+        while self.afifo[0].len() >= NB {
+            let mut f = self.silence()?; // a correctly set-up 1024-sample fltp stereo frame
+            writable_a(&mut f);
+            for ch in 0..2 {
+                let dst = f.plane_mut::<f32>(ch);
+                for (d, s) in dst.iter_mut().zip(self.afifo[ch].drain(..NB)) { *d = s; }
+            }
+            self.emit_audio(f)?;
+        }
+        let (v_ms, a_ms) = (self.vpts * 1000 / FPS as i64, (self.apts + self.afifo[0].len() as i64) * 1000 / RATE as i64);
         self.sh.out_ms.store(v_ms, Ordering::Relaxed);
         self.sh.av_ms.store(a_ms - v_ms, Ordering::Relaxed);
         self.sh.late_frames.store(self.late_frames, Ordering::Relaxed);
+        let lag = self.cur.as_ref().map(|c| c.audio_lag_ms()).unwrap_or(0);
+        self.sh.track_lag_ms.store(lag, Ordering::Relaxed);
         Ok(())
     }
 
@@ -394,8 +432,17 @@ impl Engine {
             st.filler = false;
         }
         self.idle = false;
+        let title = h.req.title.clone();
+        self.set_title(&title);
         self.sh.emit(json!({"type": "track_started", "path": h.req.path, "title": h.req.title,
             "start_ms": h.req.start_ms, "duration_ms": dur, "hwdec": info.as_ref().map(|i| i.using_hw).unwrap_or(false)}));
+    }
+
+    fn debug_track(&self, h: &Handle) {
+        if std::env::var("MEDIAD_DEBUG").is_ok() {
+            eprintln!("debug track {}: video_frames={} audio_frames={} lag_ms={} first_video_at={:?} start_pos={:?}",
+                h.req.path.rsplit('/').next().unwrap_or(""), h.frames_out, h.audio_frames, h.audio_lag_ms(), h.first_video_at, h.start_pos);
+        }
     }
 
     fn ended(&self, req: &TrackReq, reason: &str) {
@@ -453,6 +500,7 @@ impl Engine {
                         st.current = None;
                     }
                     self.sh.emit(json!({"type": "idle"}));
+                    self.set_title("");
                 }
                 let v = self.black()?;
                 self.emit_video(v)?;
@@ -491,6 +539,7 @@ impl Engine {
             match pulled {
                 Pull::Eof => {
                     let h = self.cur.take().unwrap();
+                    self.debug_track(&h);
                     match h.error() {
                         Some(msg) => self.failed(&h, &msg),
                         None => self.ended(&h.req, "eof"),
@@ -514,13 +563,17 @@ impl Engine {
                 }
                 Pull::Frame(mut a) => {
                     let mut h = self.cur.take().unwrap();
+                    if h.first_video_at.is_none() { h.first_video_at = Some(self.vpts); h.start_pos = Some(self.vpts * (RATE / FPS) as i64); }
                     self.announce(&mut h);
                     self.cur = Some(h);
                     let mut mix = None;
+                    self.next_took_video = false;
                     if let Some((from, len)) = self.xfade_from {
                         let t = (((self.vpts - from) as f32 + 1.0) / (len as f32 + 1.0)).clamp(0.0, 1.0);
                         let mut n = self.next.take().unwrap();
                         if let Pull::Frame(b) = n.video(Instant::now() + Duration::from_millis(10)) {
+                            self.next_took_video = true;
+                            if n.first_video_at.is_none() { n.first_video_at = Some(self.vpts); n.start_pos = Some(self.vpts * (RATE / FPS) as i64); }
                             self.announce(&mut n); // the next track is now visible/audible
                             blend(&mut a, &b, t, self.cfg.src.qsv, self.cfg.src.w as usize, self.cfg.src.h as usize);
                         }
@@ -532,7 +585,7 @@ impl Engine {
                     if mix.map(|t| t >= 1.0).unwrap_or(false) {
                         // crossfade complete: the outgoing track is no longer visible/audible, even if
                         // its stream runs longer than its container duration claimed
-                        if let Some(h) = self.cur.take() { self.ended(&h.req, "eof"); }
+                        if let Some(h) = self.cur.take() { self.debug_track(&h); self.ended(&h.req, "eof"); }
                         self.cur = self.next.take();
                         self.xfade_from = None;
                         self.ending_sent = false;

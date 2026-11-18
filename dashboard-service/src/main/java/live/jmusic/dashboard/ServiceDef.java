@@ -12,7 +12,8 @@ public class ServiceDef {
     public final List<String> patterns; // command-line substrings of its processes, stopped in this order
     public final List<String> logs;    // file names in the logs dir
     public final String healthUrl;     // null = no health check
-    public final String jar;           // jar file name if deployable, else null
+    public final String jar;           // deployable artifact: file name in the deploy dir (null = not deployable)
+    public final String target;        // where the artifact is installed, relative to the app dir
     public final String conflictsWith; // service that must not run at the same time
     public final boolean self;         // the dashboard itself: cannot be stopped from here
 
@@ -27,6 +28,7 @@ public class ServiceDef {
         this.logs = logs;
         this.healthUrl = healthUrl;
         this.jar = jar;
+        this.target = jar == null ? null : (jar.endsWith(".jar") ? jar : "ext/" + jar);
         this.conflictsWith = conflictsWith;
         this.self = self;
     }

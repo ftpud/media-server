@@ -177,6 +177,7 @@ async function refreshStream() {
   const av = s.audio_minus_video_ms;
   b.push(`<span class="badge ${Math.abs(av) > 40 ? 'warn' : 'ok'}">A/V ${av > 0 ? '+' : ''}${av} ms</span>`);
   b.push(`<span class="badge ${s.late_frames ? 'warn' : 'ok'}" title="frames repeated because a track was not ready in time">late ${s.late_frames}</span>`);
+  if (s.track_audio_lag_ms !== undefined) b.push(`<span class="badge ${s.track_audio_lag_ms > 40 ? 'warn' : 'ok'}" title="audio of the current track still catching up after a slow read">track lag ${s.track_audio_lag_ms} ms</span>`);
   b.push(`<span class="badge">on air ${fmtDur(Math.floor(s.output_ms / 1000))}</span>`);
   if (s.queue && s.queue.length) b.push(`<span class="badge">queued ${s.queue.length}</span>`);
   $('#nowBadges').innerHTML = b.join('');
