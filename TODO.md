@@ -64,6 +64,8 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - Put anything that needs disk space under `/home` (`/` is at ~89%). Cargo target dirs, ffmpeg source/build and test media all live on `/home`.
 - Root terminal (workspace terminal MCP) is available for `apt`, GPU access tests and installs.
 
+- Media permissions: `akb` uploads media; its files were mode 700 (unreadable for everyone else). I ran `chmod 755` on akb/ftpud-owned media+subtitle files (log with old modes: `/home/ftpud/media-perms-changed.tsv`, revert = `chmod 700` per line). ~2,900 files on `/mnt/old_tb` (`1TB_3`) could not be changed because that mount is **read-only**; I did not remount it. Services run as root so they are unaffected. To keep new uploads readable, set akb's upload umask to 022 (e.g. `sftp-server -u 022` or pam_umask) - not done.
+
 ## Phase 2: mediad skeleton
 
 - [x] (scaffold done: `mediad/Cargo.toml`, `build-env.sh`, `src/main.rs` probe that links ffmpeg-next 7.1 against ffmpeg 7.1.5; `source mediad/build-env.sh` before `cargo build`) Create `mediad/` at the repo root (outside the Maven build): `Makefile` or `Cargo.toml`, README with build instructions, config file format.
