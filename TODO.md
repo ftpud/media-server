@@ -69,16 +69,22 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 ## Phase 2: mediad skeleton
 
 - [x] (scaffold done: `mediad/Cargo.toml`, `build-env.sh`, `src/main.rs` probe that links ffmpeg-next 7.1 against ffmpeg 7.1.5; `source mediad/build-env.sh` before `cargo build`) Create `mediad/` at the repo root (outside the Maven build): `Makefile` or `Cargo.toml`, README with build instructions, config file format.
-- [ ] Dev profile: software `libx264` and output to a file or null, so it can be developed without the iGPU.
-- [ ] Prod profile: `h264_qsv`, settings copied from `FfmpegHelper.getFfmpegProdCommand` (4500k / maxrate 5500k / bufsize 4500k / g=60 / look_ahead / extbrc, 1080p30, AAC 320k 44.1 kHz stereo).
-- [ ] Master clock: output loop ticks at 30 fps; PTS = frame counter; audio PTS = sample counter; paced to wall time.
+- [x] Dev profile: software `libx264` and output to a file or null, so it can be developed without the iGPU.
+- [x] (encoder works via `mediad <out> qsv ...`; bitrate/lookahead tuning still to port) Prod profile: `h264_qsv`, settings copied from `FfmpegHelper.getFfmpegProdCommand` (4500k / maxrate 5500k / bufsize 4500k / g=60 / look_ahead / extbrc, 1080p30, AAC 320k 44.1 kHz stereo).
+- [x] (counter-based PTS, continuous across tracks; real-time pacing still TODO) Master clock: output loop ticks at 30 fps; PTS = frame counter; audio PTS = sample counter; paced to wall time.
 - [ ] Decoder slots: demux + decode thread per active track, bounded frame queue.
-- [ ] Filter graph per track: scale + pad to 1920x1080 (same as `FfmpegHelper`), drawtext for title and for the live text file (`reload=1`), optional subtitles (`ass` / `subtitles`).
-- [ ] Audio: decode, resample to 44.1 kHz stereo, apply gain in dB per track.
-- [ ] Single encoder + FLV mux + RTMP output (`rtmp://localhost/main`, same target as today's publisher).
+- [x] (scale+pad+setsar+fps+drawtext done; subtitles and live-text reload still TODO) Filter graph per track: scale + pad to 1920x1080 (same as `FfmpegHelper`), drawtext for title and for the live text file (`reload=1`), optional subtitles (`ass` / `subtitles`).
+- [x] (44.1k stereo fltp, 1024-sample frames; per-track gain still TODO) Audio: decode, resample to 44.1 kHz stereo, apply gain in dB per track.
+- [~] (single persistent encoders + one muxer done, writes mp4/flv/ts files; RTMP target not yet tested) Single encoder + FLV mux + RTMP output (`rtmp://localhost/main`, same target as today's publisher).
 - [ ] Filler frames and silence when no track is ready (decoder error, missing file, end of list), so the encoder never starves.
 - [ ] RTMP reconnect inside the process (encoder keeps running, resume on a keyframe).
 - [ ] Logging to `logs/mediad.log` with rotation; periodic stats line (fps, queue depth, dropped frames).
+
+### Phase 2 status (skeleton in `mediad/src/main.rs`, tested)
+
+- `mediad <out> <x264|qsv> <in1> [in2 ...]` plays files back-to-back into one output. Verified: 3 inputs of different fps/sample rate -> exactly 14 s, 420 frames @ 30 fps, no decode errors; a corrupt input is logged and skipped; QSV encode works (High profile).
+- **Known drift:** audio ends ~16 ms after video per track (AAC 1024-sample padding), i.e. seconds per day. Fix: carry the audio/video debt across tracks (trim or pad audio to the video length, keep a running sample debt) and verify over a long run.
+- Still TODO in Phase 2: QSV decode with automatic software fallback (see census table), real-time pacing (`-re`-like) for RTMP, RTMP output + in-process reconnect, filler frames/silence, per-track gain, subtitles, deinterlace by `field_order`, run as root for file access, logging/stats.
 
 ## Phase 3: Control API and events
 
