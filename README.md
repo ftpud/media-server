@@ -4,28 +4,13 @@ Set of services that streams a media library 24/7 to RTMP, controlled from chat 
 
 Created for personal usage.
 
-<img width="2850" height="1695" alt="image" src="https://github.com/user-attachments/assets/12fbc761-172e-4406-ab30-5dbfa26ef502" />
-
-
 ## Architecture
 
-```
-            chat (Twitch / GoodGame / sc2tv)
-                        │ commands
-                        ▼
- chat-service ──► media-service ◄──────────────── dashboard-service (web UI, :9090)
-                  (library, rotation,      ▲             │ start/stop/deploy/logs
-                   queue, search)          │ sync        ▼
-                        ▲                  │      all services + host
-                        │ now / list       │
-                  stream-service ──────────┘
-                        │ load / skip (HTTP)    ▲ events
-                        ▼                       │
- overlay ──RGBA──►   mediad  ── one encoder ──► RTMP (nginx-rtmp `main`) ──► platforms
- (3D card)          (Rust, ffmpeg 7.1 libs)
-                        ▲
- live-service ── live.txt (on-screen messages)
-```
+<img width="2850" height="1695" alt="image" src="https://github.com/user-attachments/assets/12fbc761-172e-4406-ab30-5dbfa26ef502" />
+
+<img width="2700" height="1440" alt="image" src="https://github.com/user-attachments/assets/890446fe-3202-44b1-845f-996b7d3893cc" />
+
+
 
 | Component | Language | Role |
 |---|---|---|
