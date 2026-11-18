@@ -48,7 +48,17 @@ public class StreamService {
     public void run() {
         if (!System.getProperty("os.name").contains("Win")) {
             while (true) {
-                restRequestService.requestNow(i -> runFfmpeg(i));
+                try {
+                    restRequestService.requestNow(i -> runFfmpeg(i));
+                } catch (Exception e) {
+                    log.warn("stream loop error: {}", e.toString());
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                }
             }
         }
     }
@@ -139,7 +149,14 @@ public class StreamService {
 
     private String getAudioFilter(MediaItem item) {
         if (isNotEmpty(item.getVolume())) {
-            return "volume=" + (-10 - Float.parseFloat(item.getVolume())) + "dB";
+            try {
+                float gain = -10 - Float.parseFloat(item.getVolume());
+                if (!Float.isNaN(gain) && !Float.isInfinite(gain)) {
+                    return "volume=" + Math.max(-40f, Math.min(25f, gain)) + "dB";
+                }
+            } catch (NumberFormatException e) {
+                log.info("Bad volume {}", item.getVolume());
+            }
         }
         return "volume=1";
     }

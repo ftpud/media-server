@@ -2,31 +2,32 @@ package live.jmusic.mediaservice.service;
 
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-
+/**
+ * Rotation clock. Uses a monotonic clock (System.nanoTime), so DST/NTP changes of the wall
+ * clock cannot shift the playback position.
+ */
 @Service
 public class ChronoService {
-    private static LocalDateTime startTime = LocalDateTime.now();
+    private static long startNanos = System.nanoTime();
 
     private static long offset = 0;
 
-    public static void pushOffset(long num) {
+    public static synchronized void pushOffset(long num) {
         offset += num;
     }
 
-    public static Long getTimePointer() {
-        return offset + ChronoUnit.MILLIS.between(startTime, LocalDateTime.now());
+    public static synchronized Long getTimePointer() {
+        return offset + (System.nanoTime() - startNanos) / 1_000_000L;
     }
 
     /** Re-anchor the rotation position (used to sync with the external player). */
     public static synchronized void setPointer(long ms) {
-        startTime = LocalDateTime.now();
+        startNanos = System.nanoTime();
         offset = ms;
     }
 
-    public static void resetTime() {
-        startTime = LocalDateTime.now();
+    public static synchronized void resetTime() {
+        startNanos = System.nanoTime();
         offset = 0;
     }
 }

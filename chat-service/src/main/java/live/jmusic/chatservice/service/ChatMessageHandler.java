@@ -57,15 +57,15 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
         registerEvent("^!setlist$",
                 r -> setlist(), this::everyone);
 
-        registerEvent("^!setlist ([0-9]+)$",
+        registerEvent("^!setlist ([0-9]{1,4})$",
                 r -> setlist(Integer.parseInt(r.group(1))), this::isModerator);
 
-        registerEvent("^!setlist ([^0-9].+)$",
+        registerEvent("^!setlist (?![0-9]+$)(.+)$",
                 r -> setlist(r.group(1)), this::isModerator);
 
-        registerEvent("^\\+(.+)$",
+        registerEvent("^\\+(\\p{L}.*)$",
                 r -> addTag(r.group(1)), this::isModerator);
-        registerEvent("^-(.+)$",
+        registerEvent("^-(\\p{L}.*)$",
                 r -> removeTag(r.group(1)), this::isModerator);
         registerEvent("^!tags",
                 r -> viewTags(), this::isModerator);
@@ -139,6 +139,10 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
     private void random(String item) {
         restRequestService.requestSearch(item, i ->
         {
+            if (i == null || i.length == 0) {
+                restRequestService.sendLiveMessage("Nothing found");
+                return;
+            }
             int rnd = random.nextInt(i.length);
             play(i[rnd].fullpath);
         });
@@ -181,9 +185,11 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
             try {
                 List<String> songNames = Files.readAllLines(Path.of(setlistFile));
 
-                for (int n = 0; n < songNames.size(); n++) {
-                    var split = songNames.get(n).split(" ", 2);
-                    setList.put(split[0], split[1]);
+                for (String line : songNames) {
+                    var split = line.trim().split(" ", 2);
+                    if (split.length == 2 && !split[0].isEmpty()) { // skip blank/malformed lines
+                        setList.put(split[0], split[1].trim());
+                    }
                 }
 
             } catch (Exception e) {

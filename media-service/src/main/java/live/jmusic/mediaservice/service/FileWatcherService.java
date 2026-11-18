@@ -74,6 +74,9 @@ public class FileWatcherService {
         observer.addListener(new FileAlterationListenerAdaptor() {
             @Override
             public void onFileCreate(File file) {
+                if (MediaDbService.isJunk(file)) {
+                    return;
+                }
                 log.info("File Created:" + file.getName() + ": YOUR ACTION");
                 CompletableFuture<Boolean> uploadStart = CompletableFuture.supplyAsync(
                         () -> {

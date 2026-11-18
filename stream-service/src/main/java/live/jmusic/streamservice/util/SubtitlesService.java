@@ -72,6 +72,15 @@ public class SubtitlesService {
 
     /** For mediad: converts the matching subtitle file (aligned to startMs) to a unique temp file, returns its path. */
     public Optional<String> buildSubtitlesFile(live.jmusic.shared.model.MediaItem item, long startMs) {
+        File[] old = new File("/tmp").listFiles((d, n) -> n.startsWith("mediad_sub_"));
+        if (old != null) {
+            long cutoff = System.currentTimeMillis() - 6 * 3600_000L;
+            for (File f : old) {
+                if (f.lastModified() < cutoff) {
+                    f.delete();
+                }
+            }
+        }
         for (String ext : supportedSubtitles.keySet()) {
             Optional<String> file = getSubtitlesFile(item.getFullpath(), ext);
             if (file.isPresent()) {

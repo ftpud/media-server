@@ -66,9 +66,9 @@ public class MediaDbService {
         log.info("Library processing started");
 
 
-        FileUtils.listFiles(new File(mediaLibraryPath), supportedExtensions, true).forEach(
-                f -> processFile(f, false)
-        );
+        FileUtils.listFiles(new File(mediaLibraryPath), supportedExtensions, true).stream()
+                .filter(f -> !isJunk(f))
+                .forEach(f -> processFile(f, false));
 
         log.info("All files processed");
         inMemoryRepository.updateMediaItemsList();
@@ -166,15 +166,32 @@ public class MediaDbService {
 
     }
 
-    public void processItemVolume(MediaItem item) {
+    /** macOS AppleDouble / hidden files are not media. */
+    public static boolean isJunk(File f) {
+        return f.getName().startsWith("._") || f.getName().startsWith(".");
+    }
+
+    /** @return true if a volume was measured and stored */
+    public boolean processItemVolume(MediaItem item) {
+        if (item == null) {
+            return false;
+        }
         try {
             String volume = getItemVolume(item);
+            if (volume == null) {
+                return false;
+            }
             item.setVolume(volume);
             mediaRepository.save(item);
+            return true;
         } catch (Exception e) {
             log.info(e.getMessage());
+            return false;
         }
     }
+
+    // volume analysis decodes whole files: run them one at a time, at low priority
+    private static final Object VOLUME_LOCK = new Object();
 
     private Long getItemDurationFromMeta(MediaItem item) throws IOException, InterruptedException, ParseException {
         final String json;
@@ -282,15 +299,19 @@ public class MediaDbService {
     }
 
     private String getItemVolume(MediaItem item) throws IOException, InterruptedException, ParseException {
-        final String volumeString = ProcessUtil.executeProcess(
-                volumeApp, item.fullpath
-        );
+        final String volumeString;
+        synchronized (VOLUME_LOCK) {
+            volumeString = ProcessUtil.executeProcess("nice", "-n", "15", volumeApp, item.fullpath);
+        }
 
         try {
             log.info(volumeApp + " " + item.fullpath);
             log.info(volumeString);
 
             Float volume = Float.parseFloat(volumeString);
+            if (volume.isNaN() || volume.isInfinite()) {
+                return null; // silent file ("-inf"): no usable gain
+            }
             return volume.toString();
         } catch (NullPointerException | NumberFormatException e) {
             log.info(e.toString());

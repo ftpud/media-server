@@ -21,7 +21,7 @@ public class RotationRepository {
 
     private List<MediaItem> rotationList = new ArrayList<>();
 
-    public void updateMediaItemsList() {
+    public synchronized void updateMediaItemsList() {
         rotationList = mediaRepository
                 .findAll()
                 .stream()
@@ -31,15 +31,19 @@ public class RotationRepository {
         Collections.shuffle(rotationList);
     }
 
-    public void updateMediaItem(RotationItem source, MediaItem target) {
-        rotationList.set(source.getRotationPosition(), target);
+    public synchronized void updateMediaItem(RotationItem source, MediaItem target) {
+        if (source.getRotationPosition() < rotationList.size()) rotationList.set(source.getRotationPosition(), target);
     }
 
-    public RotationItem getItemForTime(Long time) {
-        int passedTime = 0;
+    public synchronized RotationItem getItemForTime(Long time) {
+        return getItemForTime(time, true);
+    }
+
+    private RotationItem getItemForTime(Long time, boolean allowWrap) {
+        long passedTime = 0;
 
         for (int i = 0; i < rotationList.size(); i++) {
-            if (passedTime + rotationList.get(i).length > time) {
+            if (rotationList.get(i).length != null && passedTime + rotationList.get(i).length > time) {
                 RotationItem rotationItem = new RotationItem();
                 rotationItem.setMediaItem(rotationList.get(i));
                 rotationItem.setCurrentTime(time - passedTime);
@@ -52,18 +56,22 @@ public class RotationRepository {
                     rotationList.get(i).setLength(0L);
                 }
             }
-            passedTime += rotationList.get(i).getLength();
+            passedTime += rotationList.get(i).getLength() == null ? 0 : rotationList.get(i).getLength();
         }
 
+        if (!allowWrap) {
+            // empty library or every file missing: nothing playable (avoid infinite recursion)
+            throw new IllegalStateException("No playable items in rotation");
+        }
         ChronoService.resetTime();
 
         rotationList.removeIf(i -> i instanceof QueuedItem);
         Collections.shuffle(rotationList);
 
-        return getItemForTime(0L);
+        return getItemForTime(0L, false);
     }
 
-    public List<MediaItem> listNext(long time, int number) {
+    public synchronized List<MediaItem> listNext(long time, int number) {
         RotationItem item = getItemForTime(time);
         List<MediaItem> response = new ArrayList<>();
         for(int i=0; i<number && item.rotationPosition + i < rotationList.size(); i++) {
@@ -77,7 +85,7 @@ public class RotationRepository {
      * Used when the external player reports which track it actually started. If the same file
      * appears several times (queued copies) the occurrence closest to the current pointer wins.
      */
-    public boolean syncTo(String fullpath, long startMs) {
+    public synchronized boolean syncTo(String fullpath, long startMs) {
         long pointer = ChronoService.getTimePointer();
         long acc = 0, best = -1, bestDist = Long.MAX_VALUE;
         for (MediaItem m : rotationList) {
@@ -92,12 +100,13 @@ public class RotationRepository {
         return true;
     }
 
-    public void putNextQueued(MediaItem mediaItem, boolean putFirst) {
+    public synchronized void putNextQueued(MediaItem mediaItem, boolean putFirst) {
         RotationItem item = getItemForTime(ChronoService.getTimePointer());
 
         int pos = 1;
         if(!putFirst) {
-            while (rotationList.get(item.rotationPosition + pos) instanceof QueuedItem) {
+            while (item.rotationPosition + pos < rotationList.size()
+                    && rotationList.get(item.rotationPosition + pos) instanceof QueuedItem) {
                 pos++;
             }
         }

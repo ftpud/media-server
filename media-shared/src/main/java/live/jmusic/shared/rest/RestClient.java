@@ -69,8 +69,8 @@ public class RestClient {
             try {
                 //response = recoverableRestTemplate.getForEntity(url, clazz);
                 response = request.get();
-            } catch (HttpClientErrorException | ResourceAccessException e) {
-                log.info("Can't access rest resource");
+            } catch (org.springframework.web.client.RestClientException e) {
+                log.info("Can't access rest resource: {}", e.getMessage());
             }
             if (response != null) {
                 if (response.getStatusCode() == HttpStatus.OK) {

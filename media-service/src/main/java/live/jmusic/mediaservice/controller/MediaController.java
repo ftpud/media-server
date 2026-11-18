@@ -66,13 +66,17 @@ public class MediaController {
 
     @GetMapping("/seek/{time}")
     public String seek(@PathVariable String time) {
-        if (time.matches("[0-9][0-9]:[0-9][0-9]")) {
-            time = "00:" + time;
-        }
-
         try {
-            LocalTime t = LocalTime.parse(time);
-            Long fwdTime = t.toSecondOfDay() * 1000L;
+            // accepts M:SS, MM:SS (minutes may exceed 59) and H:MM:SS
+            String[] parts = time.trim().split(":");
+            long secs = 0;
+            for (String p : parts) {
+                secs = secs * 60 + Long.parseLong(p);
+            }
+            if (parts.length < 2 || parts.length > 3) {
+                return "err";
+            }
+            Long fwdTime = secs * 1000L;
             RotationItem item = rotationRepository.getItemForTime(ChronoService.getTimePointer());
             ChronoService.pushOffset(-item.currentTime + fwdTime);
             restRequestService.requestRestart();
@@ -83,11 +87,15 @@ public class MediaController {
         }
     }
 
+    private final Set<Long> volumeFixAttempted = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     @GetMapping("/fixVolume/{id}")
     public String fixVolume(@PathVariable("id") Long id) {
         Optional<MediaItem> item = mediaRepository.findById(id);
         if (item.isPresent()) {
-            mediaDbService.processItemVolume(item.get());
+            if (!mediaDbService.processItemVolume(item.get())) {
+                return "no volume"; // nothing changed: do not restart the stream
+            }
             RotationItem currentItem = rotationRepository.getItemForTime(ChronoService.getTimePointer());
             if (currentItem.getMediaItem().fullpath.equals(item.get().fullpath)) {
                 //currentItem.setMediaItem(item.get());
@@ -114,9 +122,11 @@ public class MediaController {
     public RotationItem now() {
 
         RotationItem item = rotationRepository.getItemForTime(ChronoService.getTimePointer());
-        if (item.getMediaItem().volume == null) {
+        if (item.getMediaItem().volume == null && volumeFixAttempted.add(item.getMediaItem().getId())) {
+            // once per item and asynchronously: never block /now, never loop on files without a measurable volume
             log.info("Fixing volume initiated");
-            restRequestService.requestVolumeFix(item.getMediaItem().getId());
+            Long id = item.getMediaItem().getId();
+            CompletableFuture.runAsync(() -> restRequestService.requestVolumeFix(id));
         }
         return item;
     }
@@ -167,11 +177,16 @@ public class MediaController {
         var items = mediaRepository.findAll().stream();
         Stream<MediaItem> filtered;
 
-        if (query.startsWith("/") && query.endsWith("/")) {
-            filtered = items.filter(i -> i.getFullpath()
-                    .concat(i.getTags().stream().collect(Collectors.joining(" ")))
-                    .toLowerCase()
-                    .matches(".*" + query.substring(1, query.length() - 1) + ".*"));
+        if (query.length() > 2 && query.startsWith("/") && query.endsWith("/")) {
+            java.util.regex.Pattern p;
+            try {
+                p = java.util.regex.Pattern.compile(query.substring(1, query.length() - 1), java.util.regex.Pattern.CASE_INSENSITIVE);
+            } catch (java.util.regex.PatternSyntaxException e) {
+                return Collections.emptyList();
+            }
+            filtered = items.filter(i -> p.matcher(i.getFullpath()
+                    .concat(" ")
+                    .concat(i.getTags().stream().collect(Collectors.joining(" ")))).find());
         } else {
             filtered = items.filter(i -> Arrays.stream(query.split("[ ]"))
                     .allMatch(token -> i.getFullpath()
