@@ -114,7 +114,7 @@ public class MediadStreamService {
 
     private void queueNext() {
         AtomicReference<MediaItem[]> ref = new AtomicReference<>();
-        restRequestService.requestList(ref::set);
+        restRequestService.requestUpcoming(ref::set);
         MediaItem[] items = ref.get();
         // index 0 is the current item, 1 the next one; at the end of the rotation there is no next yet
         if (items != null && items.length >= 2) {

@@ -50,6 +50,20 @@ impl Canvas {
         }
     }
 
+    /// Small anti-aliased triangle pointing right (play / next marker).
+    pub fn triangle_right(&mut self, x: f32, y: f32, w: f32, h: f32, c: Rgba) {
+        for py in (y.floor() as usize)..((y + h).ceil() as usize).min(self.h) {
+            for px in (x.floor() as usize)..((x + w).ceil() as usize).min(self.w) {
+                let (fx, fy) = (px as f32 + 0.5 - x, py as f32 + 0.5 - y);
+                // inside if left of both slanted edges
+                let half = h / 2.0;
+                let d = (w * (1.0 - (fy - half).abs() / half)) - fx; // distance to the slanted edge (horizontal)
+                let cov = (d.min(fx + 0.5)).clamp(0.0, 1.0);
+                self.blend(px, py, c, cov);
+            }
+        }
+    }
+
     pub fn gradient_rect(&mut self, x: f32, y: f32, w: f32, h: f32, a: Rgba, b: Rgba) {
         if w <= 0.0 { return; }
         let (x0, y0) = (x.max(0.0) as usize, y.max(0.0) as usize);
@@ -63,29 +77,48 @@ impl Canvas {
         }
     }
 
-    /// Draws `card` rotated by `angle` (radians) around its vertical center axis, centered at
-    /// (cx, cy), with a pinhole camera at focal distance `f`. Inverse mapping per pixel, bilinear.
-    pub fn warp_card(&mut self, card: &Canvas, angle: f32, cx: f32, cy: f32, f: f32) {
-        let (sin, cos) = angle.sin_cos();
+    /// Draws `card` with its center at (cx, cy): scaled by `scale`, rotated in 3D around its
+    /// vertical axis (`ay`, radians) or horizontal axis (`ax`), with a pinhole camera at focal
+    /// distance `f`, and opacity `alpha`. Inverse mapping, bilinear, limited to the bounding box.
+    pub fn draw(&mut self, card: &Canvas, cx: f32, cy: f32, scale: f32, ay: f32, ax: f32, alpha: f32, f: f32) {
+        if alpha <= 0.01 || scale <= 0.01 { return; }
+        let (ang, about_x) = if ax.abs() > 1e-4 { (ax, true) } else { (ay, false) };
+        let (sin, cos) = ang.sin_cos();
         if cos.abs() < 1e-3 { return; } // edge-on
         let (hw, hh) = (card.w as f32 / 2.0, card.h as f32 / 2.0);
-        let shade = 0.55 + 0.45 * cos.abs(); // darker as it turns away
-        for y in 0..self.h {
-            let v = y as f32 + 0.5 - cy;
-            for x in 0..self.w {
-                let u = x as f32 + 0.5 - cx;
-                let den = f * cos - u * sin;
+        // bounding box (perspective can enlarge the near edge a bit)
+        let grow = 1.0 + 0.6 * sin.abs();
+        let (bw, bh) = (hw * scale * grow + 2.0, hh * scale * grow + 2.0);
+        let x0 = (cx - bw).max(0.0) as usize;
+        let x1 = ((cx + bw).ceil() as usize).min(self.w);
+        let y0 = (cy - bh).max(0.0) as usize;
+        let y1 = ((cy + bh).ceil() as usize).min(self.h);
+        let shade = 0.6 + 0.4 * cos.abs(); // darker as it turns away
+        for y in y0..y1 {
+            let v = (y as f32 + 0.5 - cy) / scale;
+            for x in x0..x1 {
+                let u = (x as f32 + 0.5 - cx) / scale;
+                // undo the rotation: a = coordinate across the axis, b = along the axis
+                let (a, b) = if about_x { (v, u) } else { (u, v) };
+                let den = f * cos - a * sin;
                 if den.abs() < 1e-3 { continue; }
-                let xs = u * f / den;                 // card-local x (before projection)
-                let ys = v * (f + xs * sin) / f;      // card-local y
+                let a_s = a * f / den;
+                let b_s = b * (f + a_s * sin) / f;
+                let (xs, ys) = if about_x { (b_s, a_s) } else { (a_s, b_s) };
                 let (sx, sy) = (xs + hw - 0.5, ys + hh - 0.5);
                 if sx < -1.0 || sy < -1.0 || sx >= card.w as f32 || sy >= card.h as f32 { continue; }
                 let p = card.sample(sx, sy);
                 if p[3] == 0 { continue; }
                 let c = Rgba((p[0] as f32 * shade) as u8, (p[1] as f32 * shade) as u8, (p[2] as f32 * shade) as u8, p[3]);
-                self.blend(x, y, c, 1.0);
+                self.blend(x, y, c, alpha);
             }
         }
+    }
+
+    /// Rotation around the vertical axis at scale 1.
+    #[allow(dead_code)]
+    pub fn warp_card(&mut self, card: &Canvas, angle: f32, cx: f32, cy: f32, f: f32) {
+        self.draw(card, cx, cy, 1.0, angle, 0.0, 1.0, f);
     }
 
     fn sample(&self, x: f32, y: f32) -> [u8; 4] {
@@ -123,12 +156,29 @@ impl TextRenderer {
     }
 
     fn glyph(&mut self, ch: char, size: f32) -> &(fontdue::Metrics, Vec<u8>) {
+        if self.cache.len() > 20_000 { self.cache.clear(); }
         let font = &self.font;
         self.cache.entry((ch, (size * 4.0) as u32)).or_insert_with(|| font.rasterize(ch, size))
     }
 
     pub fn width(&mut self, text: &str, size: f32) -> f32 {
         text.chars().map(|c| self.glyph(c, size).0.advance_width).sum()
+    }
+
+    /// Text cut with an ellipsis so that it fits `max_w`.
+    pub fn fit(&mut self, text: &str, size: f32, max_w: f32) -> String {
+        let mut s: String = text.to_string();
+        if self.width(&s, size) > max_w {
+            while !s.is_empty() && self.width(&(s.clone() + "…"), size) > max_w { s.pop(); }
+            s.push('…');
+        }
+        s
+    }
+
+    /// Faux bold: the same text drawn twice, 0.7 px apart.
+    pub fn bold(&mut self, c: &mut Canvas, text: &str, x: f32, y: f32, size: f32, color: Rgba, max_w: f32) -> f32 {
+        self.text(c, text, x, y, size, color, max_w);
+        self.text(c, text, x + 0.7, y, size, color, max_w)
     }
 
     /// Single line at top-left (x, y), cut with an ellipsis to `max_w`. Returns the drawn width.

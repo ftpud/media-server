@@ -47,6 +47,11 @@ public class RestRequestService {
         RestClient.recoverableRequest(coreServiceUri + "/media/list", MediaItem[].class, onSuccess);
     }
 
+    /** Up next for internal use (does not count as a user's !list). */
+    public void requestUpcoming(Consumer<MediaItem[]> onSuccess) {
+        RestClient.recoverableRequest(coreServiceUri + "/media/list?internal=1", MediaItem[].class, onSuccess);
+    }
+
     public void requestSeek(String time, Consumer<String> onSuccess) {
         RestClient.recoverableRequest(coreServiceUri + "/media/seek/" + time, String.class, onSuccess);
     }

@@ -99,6 +99,8 @@ pub struct Engine {
     afifo: [std::collections::VecDeque<f32>; 2], // output samples not yet cut into encoder frames
     snap: Option<(filter::Graph, encoder::Video)>,
     last_snap: Instant,
+    cur_title: String,
+    title_hidden: bool, // an overlay client is connected and draws the title itself
 }
 
 impl Engine {
@@ -156,6 +158,8 @@ impl Engine {
             afifo: [std::collections::VecDeque::new(), std::collections::VecDeque::new()],
             snap: None,
             last_snap: Instant::now(),
+            cur_title: String::new(),
+            title_hidden: false,
         };
         e.post = e.post_graph()?;
         Ok(e)
@@ -359,6 +363,12 @@ impl Engine {
 
     fn emit_video(&mut self, mut f: frame::Video) -> Result<()> {
         self.pace();
+        let overlay_on = self.overlay.as_ref().map(|l| l.lock().unwrap().is_some()).unwrap_or(false);
+        if overlay_on != self.title_hidden {
+            self.title_hidden = overlay_on;
+            let t = if overlay_on { String::new() } else { self.cur_title.clone() };
+            self.set_title(&t);
+        }
         self.last = Some(f.clone());
         f.set_pts(Some(self.vpts));
         if let Some(g) = self.post.as_mut() {
@@ -475,8 +485,11 @@ impl Engine {
             st.filler = false;
         }
         self.idle = false;
-        let title = h.req.title.clone();
-        self.set_title(&title);
+        self.cur_title = h.req.title.clone();
+        if !self.title_hidden {
+            let t = self.cur_title.clone();
+            self.set_title(&t);
+        }
         self.sh.emit(json!({"type": "track_started", "path": h.req.path, "title": h.req.title,
             "start_ms": h.req.start_ms, "duration_ms": dur, "hwdec": info.as_ref().map(|i| i.using_hw).unwrap_or(false)}));
     }
@@ -543,6 +556,7 @@ impl Engine {
                         st.current = None;
                     }
                     self.sh.emit(json!({"type": "idle"}));
+                    self.cur_title.clear();
                     self.set_title("");
                 }
                 let v = self.black()?;

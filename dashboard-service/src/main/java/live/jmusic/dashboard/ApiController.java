@@ -247,7 +247,7 @@ public class ApiController {
 
     @GetMapping("/stream/upcoming")
     public ResponseEntity<String> upcoming() {
-        return proxy(MEDIA + "/media/list", null);
+        return proxy(MEDIA + "/media/list?internal=1", null);
     }
 
     @PostMapping("/stream/next")

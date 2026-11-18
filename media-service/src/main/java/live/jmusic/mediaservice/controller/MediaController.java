@@ -155,11 +155,32 @@ public class MediaController {
         return enqueueItem(item, true);
     }
 
+    private volatile long listRequestedAt = 0;
+    private volatile long overlaySeenAt = 0;
+
+    /**
+     * Up next. Internal callers (stream-service, dashboard, overlay) pass ?internal=1. A call
+     * without it is a user's !list from chat: the overlay is told to animate the list, and while
+     * the overlay is alive the chat bot gets an empty answer so it does not also print 30 lines.
+     */
     @GetMapping("/list")
-    public List<MediaItem> list() {
+    public List<MediaItem> list(@RequestParam(value = "internal", required = false) String internal) {
         List<MediaItem> items = listNext(30);
         items.forEach(this::decorateTitle);
+        if (internal == null) {
+            listRequestedAt = System.currentTimeMillis();
+            if (System.currentTimeMillis() - overlaySeenAt < 10_000) {
+                return Collections.emptyList();
+            }
+        }
         return items;
+    }
+
+    /** Polled by the overlay: when the last !list happened (and proof that the overlay is alive). */
+    @GetMapping("/list/requested")
+    public Map<String, Long> listRequested() {
+        overlaySeenAt = System.currentTimeMillis();
+        return Map.of("at", listRequestedAt);
     }
 
     /** Stream title "≫　Artist／Song" from the path below ___UNDERGROUND/ (as in the deployed build). */
