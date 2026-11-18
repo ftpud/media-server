@@ -63,15 +63,25 @@ public class MediaDbService {
 
     @PostConstruct
     public void init() {
-        log.info("Library processing started");
-
-
-        FileUtils.listFiles(new File(mediaLibraryPath), supportedExtensions, true).stream()
-                .filter(f -> !isJunk(f))
-                .forEach(f -> processFile(f, false));
-
-        log.info("All files processed");
+        // Serve immediately from the database; scanning the whole library takes minutes on the
+        // slow/failing disks and used to block startup (and therefore the stream) for ~6 minutes.
         inMemoryRepository.updateMediaItemsList();
+        log.info("Rotation loaded from the database, library scan continues in the background");
+        Thread scan = new Thread(() -> {
+            try {
+                log.info("Library processing started");
+                FileUtils.listFiles(new File(mediaLibraryPath), supportedExtensions, true).stream()
+                        .filter(f -> !isJunk(f))
+                        .forEach(f -> processFile(f, false));
+                log.info("All files processed");
+                // new files join the rotation without reshuffling what is already playing
+                inMemoryRepository.appendNewItems();
+            } catch (Exception e) {
+                log.error("Library scan failed: {}", e.toString());
+            }
+        }, "library-scan");
+        scan.setDaemon(true);
+        scan.start();
     }
 
     public MediaItem processFile(File file, boolean full) {

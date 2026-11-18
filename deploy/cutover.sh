@@ -38,7 +38,7 @@ install -m 755 $STAGING/rollback.sh $APP/rollback.sh
 stop "java -jar media-service.jar"
 cp $STAGING/media-service.jar $APP/media-service.jar
 start_java media-service
-wait_http http://localhost:8084/health 180 || { log "media-service did not come up"; exec $APP/rollback.sh; }
+wait_http http://localhost:8084/health 600 || { log "media-service did not come up"; exec $APP/rollback.sh; }
 log "media-service up"
 
 # 2) enable mediad in stream-service

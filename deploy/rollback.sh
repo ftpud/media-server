@@ -25,5 +25,5 @@ if ! cmp -s "$BK/media-service.jar" $APP/media-service.jar; then
   for _ in $(seq 1 180); do curl -s -m 2 http://localhost:8084/health > /dev/null && break; sleep 1; done
 fi
 start_java stream-service
-start_java publisher-service   # starts balance-service and the concat ffmpeg itself
+[ -z "$(pids "java -jar publisher-service.jar")" ] && start_java publisher-service   # it starts balance-service + the concat ffmpeg itself
 log "old pipeline restarted from $BK"

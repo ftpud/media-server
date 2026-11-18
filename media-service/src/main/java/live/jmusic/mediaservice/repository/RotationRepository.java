@@ -31,6 +31,16 @@ public class RotationRepository {
         Collections.shuffle(rotationList);
     }
 
+    /** Adds rotation-eligible items from the database that are not in the rotation yet (no reshuffle). */
+    public synchronized void appendNewItems() {
+        java.util.Set<String> known = rotationList.stream().map(MediaItem::getFullpath).collect(Collectors.toSet());
+        List<MediaItem> fresh = mediaRepository.findAll().stream()
+                .filter(m -> m.getFullpath().contains("___UNDERGROUND") && !known.contains(m.getFullpath()))
+                .collect(Collectors.toList());
+        Collections.shuffle(fresh);
+        rotationList.addAll(fresh);
+    }
+
     public synchronized void updateMediaItem(RotationItem source, MediaItem target) {
         if (source.getRotationPosition() < rotationList.size()) rotationList.set(source.getRotationPosition(), target);
     }
