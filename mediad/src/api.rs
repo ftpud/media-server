@@ -39,8 +39,11 @@ pub struct Shared {
     pub st: Mutex<State>,
     pub cv: Condvar,
     pub skip: AtomicBool,
+    pub clear_next: AtomicBool,
     pub seek_ms: AtomicI64, // -1 = none
     pub pos_ms: AtomicI64,
+    pub out_ms: AtomicI64,
+    pub av_ms: AtomicI64,
     pub started: Instant,
 }
 
@@ -50,8 +53,11 @@ impl Shared {
             st: Mutex::new(State { next_id: 1, ..Default::default() }),
             cv: Condvar::new(),
             skip: AtomicBool::new(false),
+            clear_next: AtomicBool::new(false),
             seek_ms: AtomicI64::new(-1),
             pos_ms: AtomicI64::new(0),
+            out_ms: AtomicI64::new(0),
+            av_ms: AtomicI64::new(0),
             started: Instant::now(),
         })
     }
@@ -159,6 +165,7 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
         }
         "/clear" => {
             sh.st.lock().unwrap().queue.clear();
+            sh.clear_next.store(true, Ordering::SeqCst);
             respond(s, "200 OK", &json!({"ok": true}));
         }
         "/status" => {
@@ -168,7 +175,8 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
                 "position_ms": sh.pos_ms.load(Ordering::SeqCst), "duration_ms": st.duration_ms}));
             let queue: Vec<Value> = st.queue.iter().map(|t| json!({"path": t.path, "title": t.title})).collect();
             let body = json!({"current": cur, "queue": queue, "connected": st.connected,
-                "filler": st.filler, "last_event_id": st.next_id - 1});
+                "filler": st.filler, "last_event_id": st.next_id - 1,
+                "output_ms": sh.out_ms.load(Ordering::Relaxed), "audio_minus_video_ms": sh.av_ms.load(Ordering::Relaxed)});
             drop(st);
             respond(s, "200 OK", &body);
         }

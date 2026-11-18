@@ -2,12 +2,15 @@
 //!
 //! usage: mediad --out <rtmp-url|file> [--encoder x264|qsv] [--port 8095] [--hwdec on|off]
 //!               [--play file ...]
-//! env:   MEDIAD_W/MEDIAD_H (default 1920x1080), MEDIAD_FONT, MEDIAD_LIVE_FILE, MEDIAD_ENDING_MS
+//! env:   MEDIAD_W/MEDIAD_H (default 1920x1080), MEDIAD_FONT, MEDIAD_LIVE_FILE, MEDIAD_ENDING_MS,
+//!        MEDIAD_XFADE_MS (crossfade, default 1500, 0 = cut), MEDIAD_ZMQ (e.g. tcp://127.0.0.1:5555),
+//!        MEDIAD_OVERLAY (e.g. 127.0.0.1:8096:640x200+20+60, raw RGBA over TCP)
 //!
 //! Tracks are queued through the local HTTP API (see api.rs); with nothing queued it emits
 //! black + silence so the stream never stops. Use `--play` for quick manual tests.
 mod api;
 mod engine;
+mod overlay;
 
 use anyhow::{anyhow, Result};
 use api::{Shared, TrackReq};
@@ -40,6 +43,9 @@ fn main() -> Result<()> {
         font: std::env::var("MEDIAD_FONT").unwrap_or_else(|_| "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc".into()),
         live_file: std::env::var("MEDIAD_LIVE_FILE").ok(),
         ending_ms: env_u32("MEDIAD_ENDING_MS", 15_000) as i64,
+        xfade_ms: env_u32("MEDIAD_XFADE_MS", 1500) as i64,
+        zmq: std::env::var("MEDIAD_ZMQ").ok().filter(|v| !v.is_empty()),
+        overlay: std::env::var("MEDIAD_OVERLAY").ok().and_then(|v| overlay::OverlayCfg::parse(&v)),
     };
     let sh = Shared::new();
     for p in play {
