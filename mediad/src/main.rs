@@ -11,6 +11,7 @@
 mod api;
 mod engine;
 mod overlay;
+mod source;
 
 use anyhow::{anyhow, Result};
 use api::{Shared, TrackReq};
@@ -36,11 +37,13 @@ fn main() -> Result<()> {
     let env_u32 = |k: &str, d: u32| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
     let cfg = Cfg {
         url: out,
-        qsv: enc == "qsv",
-        hwdec: hwdec && enc == "qsv",
-        w: env_u32("MEDIAD_W", 1920),
-        h: env_u32("MEDIAD_H", 1080),
-        font: std::env::var("MEDIAD_FONT").unwrap_or_else(|_| "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc".into()),
+        src: source::SrcCfg {
+            w: env_u32("MEDIAD_W", 1920),
+            h: env_u32("MEDIAD_H", 1080),
+            qsv: enc == "qsv",
+            hwdec: hwdec && enc == "qsv",
+            font: std::env::var("MEDIAD_FONT").unwrap_or_else(|_| "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc".into()),
+        },
         live_file: std::env::var("MEDIAD_LIVE_FILE").ok(),
         ending_ms: env_u32("MEDIAD_ENDING_MS", 15_000) as i64,
         xfade_ms: env_u32("MEDIAD_XFADE_MS", 1500) as i64,

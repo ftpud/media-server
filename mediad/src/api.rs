@@ -44,6 +44,7 @@ pub struct Shared {
     pub pos_ms: AtomicI64,
     pub out_ms: AtomicI64,
     pub av_ms: AtomicI64,
+    pub late_frames: AtomicI64,
     pub started: Instant,
 }
 
@@ -58,6 +59,7 @@ impl Shared {
             pos_ms: AtomicI64::new(0),
             out_ms: AtomicI64::new(0),
             av_ms: AtomicI64::new(0),
+            late_frames: AtomicI64::new(0),
             started: Instant::now(),
         })
     }
@@ -176,7 +178,8 @@ fn handle(mut s: TcpStream, sh: Arc<Shared>) {
             let queue: Vec<Value> = st.queue.iter().map(|t| json!({"path": t.path, "title": t.title})).collect();
             let body = json!({"current": cur, "queue": queue, "connected": st.connected,
                 "filler": st.filler, "last_event_id": st.next_id - 1,
-                "output_ms": sh.out_ms.load(Ordering::Relaxed), "audio_minus_video_ms": sh.av_ms.load(Ordering::Relaxed)});
+                "output_ms": sh.out_ms.load(Ordering::Relaxed), "audio_minus_video_ms": sh.av_ms.load(Ordering::Relaxed),
+                "late_frames": sh.late_frames.load(Ordering::Relaxed)});
             drop(st);
             respond(s, "200 OK", &body);
         }
