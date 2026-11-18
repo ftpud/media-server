@@ -18,10 +18,10 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 
 ## Phase 0: Baseline and quick wins (independent of mediad)
 
-- [ ] Look at the "Abnormal invoke" storm in `stream-service.log` (e.g. 2026-11-17 23:16, `___UNDERGROUND/Oiran Dochu`) and find the root cause.
-- [ ] Limit `volumedetect` concurrency to 1 and run it with `nice`/`ionice` (startFullProcessing / fixVolume path). Server load is ~9 on 8 cores.
-- [ ] Fix the `/media/now` -> `/fixVolume` self-call loop (blocking call, volume stays null, restart every cycle).
-- [ ] Add log rotation (`stream-service.log` is ~690 MB, `chat-service.log` ~80 MB).
+- [x] Look at the "Abnormal invoke" storm in `stream-service.log` (e.g. 2026-11-17 23:16, `___UNDERGROUND/Oiran Dochu`) and find the root cause.
+- [x] Limit `volumedetect` concurrency to 1 and run it with `nice`/`ionice` (startFullProcessing / fixVolume path). Server load is ~9 on 8 cores.
+- [x] Fix the `/media/now` -> `/fixVolume` self-call loop (blocking call, volume stays null, restart every cycle).
+- [x] Add log rotation (`stream-service.log` is ~690 MB, `chat-service.log` ~80 MB).
 - [ ] Record baseline numbers to compare later: stream ffmpeg CPU/RSS, load average, publisher restarts per day (`grep -c "Publisher terminated" publisher-service.log`), abnormal-invoke count.
 
 ## Phase 1: Build ffmpeg for linking
@@ -114,15 +114,15 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 
 ## Phase 4: Java integration
 
-- [ ] `stream-service`: replace the per-track ffmpeg spawning (`StreamService.runFfmpeg`) with a `MediadClient` that sends `load` and reacts to events. Keep `FfmpegHelper`/`SubtitlesService` logic as the source of settings until fully ported.
-- [ ] `media-service` rotation: replace time-based lookup (`RotationRepository.getItemForTime` + `ChronoService`) with a cursor into the list advanced on `track_started`. Add `peek next` for pre-roll and for showing upcoming items.
-- [ ] While there: fix the end-of-list bugs (`listNext`, `putNextQueued`), infinite recursion on an empty/all-missing list, thread safety of `rotationList`, regex search handling (case-insensitive pattern, invalid pattern).
-- [ ] Pass volume gain from media-service data; clamp the gain (no unbounded boost, handle `-inf`).
-- [ ] Unique per-track subtitle output path instead of `/tmp/converted_sub.*`; do not reuse a stale file if subsync fails.
-- [ ] Escape `%` and `\` in drawtext titles (currently only `'` is stripped).
-- [ ] `RestClient`: handle 5xx (`HttpServerErrorException`) so callers don't crash; do not let an exception in one callback end `StreamService.run()`.
-- [ ] Chat: fix `!time` format mismatch with `/media/seek`, guard `!random` with empty results, tighten the `+`/`-` tag commands.
-- [ ] Dashboard `ServiceController`: add `mediad` to `validServices`, log map and start/stop/deploy handling.
+- [x] `stream-service`: replace the per-track ffmpeg spawning (`StreamService.runFfmpeg`) with a `MediadClient` that sends `load` and reacts to events. Keep `FfmpegHelper`/`SubtitlesService` logic as the source of settings until fully ported.
+- [x] `media-service` rotation: replace time-based lookup (`RotationRepository.getItemForTime` + `ChronoService`) with a cursor into the list advanced on `track_started`. Add `peek next` for pre-roll and for showing upcoming items.
+- [x] While there: fix the end-of-list bugs (`listNext`, `putNextQueued`), infinite recursion on an empty/all-missing list, thread safety of `rotationList`, regex search handling (case-insensitive pattern, invalid pattern).
+- [x] Pass volume gain from media-service data; clamp the gain (no unbounded boost, handle `-inf`).
+- [x] Unique per-track subtitle output path instead of `/tmp/converted_sub.*`; do not reuse a stale file if subsync fails.
+- [x] Escape `%` and `\` in drawtext titles (currently only `'` is stripped).
+- [x] `RestClient`: handle 5xx (`HttpServerErrorException`) so callers don't crash; do not let an exception in one callback end `StreamService.run()`.
+- [x] Chat: fix `!time` format mismatch with `/media/seek`, guard `!random` with empty results, tighten the `+`/`-` tag commands.
+- [x] Dashboard `ServiceController`: add `mediad` to `validServices`, log map and start/stop/deploy handling.
 
 ## Phase 5: Test and soak
 
@@ -134,7 +134,7 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 
 ## Phase 6: Cutover and cleanup
 
-- [ ] Add a watchdog/supervisor for mediad (restart within seconds on crash).
+- [x] Add a watchdog/supervisor for mediad (restart within seconds on crash).
 - [ ] Cut over: stop publisher-service, balance-service and the old `ffmpeg_stream` concat process, start mediad on `rtmp://localhost/main`. Keep the old services deployable for rollback.
 - [ ] Verify with the real viewers' player: no reconnect at track changes.
 - [ ] After a stable period, remove `publisher-service`, `balance-service`, `list.txt`, the FIFOs, `detectAbnormality`, and the dashboard entries.
@@ -143,16 +143,23 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 ## Phase 7: Overlay renderer (later)
 
 - [ ] Separate overlay service rendering RGBA frames (native EGL renderer or headless Chromium; decide after measuring iGPU headroom with `intel_gpu_top`).
-- [ ] mediad reads overlay frames from a local TCP socket as an extra filter-graph input; fully transparent/skipped when idle.
+- [x] mediad reads overlay frames from a local TCP socket as an extra filter-graph input; fully transparent/skipped when idle.
 - [ ] Wire live data (queue/upcoming items, chat) from media-service and live-service to the renderer; retire the `live.txt` reload.
 - [ ] Check the cost: start with a small region at 15-30 fps; consider `overlay_qsv` to keep frames on the GPU.
 
 ## Phase 8: Transitions (later)
 
-- [ ] Two overlapping decoder slots in the filter graph.
-- [ ] Transition types (crossfade first, then wipe/slide/custom), with a configurable duration.
-- [ ] Interaction with `skip`/`seek` (cut instead of transition when the user skips).
-- [ ] Optional audio crossfade.
+- [x] Two overlapping decoder slots in the filter graph.
+- [x] Transition types (crossfade first, then wipe/slide/custom), with a configurable duration.
+- [x] Interaction with `skip`/`seek` (cut instead of transition when the user skips).
+- [x] Optional audio crossfade.
+
+## Status summary (2026-11-18, branch `experimental`)
+
+- **mediad**: threaded sources (decode off the output clock), pre-roll 10 s ahead, crossfades (video blend + audio mix), exact A/V lock per output frame (aligned by input timestamps), late-frame hold instead of stalls, filler when idle, RTMP reconnect, QSV decode with software fallback, post graph (live text + zmq `drawtext@live`), overlay input (raw RGBA over TCP), Unicode titles, `/status` with `late_frames`/`audio_minus_video_ms`/`output_ms`, supervisor script.
+- **Java**: mediad driver in stream-service (opt-in), `/media/sync`, review fixes (see commit a9c0ec4), production-only behavior recovered from the deployed jar and ported (rotation = `___UNDERGROUND` only, `≫　Artist／Song` titles). The deployed jars of chat-service and dashboard-service also differ from git (uncommitted changes on the build machine): they are NOT redeployed; commit that source before changing them. The deployed media-service also contained unused AI classes (AiProcessor/ChatGpt) - intentionally dropped.
+- **Ops**: logrotate installed (`/etc/logrotate.d/media-server`), `deploy/cutover.sh` + `deploy/rollback.sh`, staging in `/home/ftpud/deploy-staging`.
+- Incident during testing: a sandbox media-service (using the production `config.properties`) called the production stream-service `/media/restart` once (2026-11-18 02:10:59, ~1-2 s glitch). Sandboxes must override `media.*.uri/url`.
 
 ## Phase 9: Dashboard rewrite (last phase)
 
