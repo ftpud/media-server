@@ -141,8 +141,32 @@ public class MediaController {
     }
 
     @PostMapping("/search/")
-    public List<MediaItem> search(@RequestBody String item) {
-        return searchAll(item, 30);
+    public List<MediaItem> search(@RequestBody String item, @RequestParam(value = "internal", required = false) String internal) {
+        List<MediaItem> found = searchAll(item, 30);
+        if (internal == null) {
+            // a chat !search: let the overlay show the results (numbered like the chat, from 0)
+            List<Map<String, Object>> shown = new ArrayList<>();
+            for (MediaItem m : found.subList(0, Math.min(8, found.size()))) {
+                shown.add(Map.of("title", displayTitle(m), "request", m.getFullpath().contains("RequestOnly")));
+            }
+            lastSearch = Map.of("at", System.currentTimeMillis(), "query", item.trim(), "total", found.size(), "results", shown);
+        }
+        return found;
+    }
+
+    private volatile Map<String, Object> lastSearch = Map.of("at", 0L, "query", "", "total", 0, "results", List.of());
+
+    /** Polled by the overlay: last !list and !search (also proves that the overlay is alive). */
+    @GetMapping("/overlay/state")
+    public Map<String, Object> overlayState() {
+        overlaySeenAt = System.currentTimeMillis();
+        return Map.of("list_at", listRequestedAt, "search", lastSearch);
+    }
+
+    /** Asked by live-service: is the overlay drawing chat results, so the text version can be skipped? */
+    @GetMapping("/overlay/alive")
+    public Map<String, Boolean> overlayAlive() {
+        return Map.of("alive", System.currentTimeMillis() - overlaySeenAt < 10_000);
     }
 
     @PostMapping("/enqueue/")
@@ -188,13 +212,22 @@ public class MediaController {
         if (mi == null || mi.title == null || mi.fullpath == null) {
             return;
         }
+        mi.setTitle(displayTitle(mi));
+    }
+
+    /** "≫　Artist／Song" for ___UNDERGROUND files, the plain title otherwise (no mutation). */
+    private static String displayTitle(MediaItem mi) {
+        if (mi.title == null || mi.fullpath == null) {
+            return String.valueOf(mi.title);
+        }
         if (!mi.title.startsWith("\u226b\u3000") && mi.fullpath.contains("___UNDERGROUND/")) {
             String name = mi.fullpath.split("___UNDERGROUND/")[1];
             if (name.lastIndexOf('.') > 0) {
                 name = name.substring(0, name.lastIndexOf('.'));
             }
-            mi.setTitle("\u226b\u3000" + name.replace("/", "\uff0f"));
+            return "\u226b\u3000" + name.replace("/", "\uff0f");
         }
+        return mi.title;
     }
 
     private MediaItem enqueueItem(String item, boolean next) {

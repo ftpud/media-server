@@ -264,7 +264,7 @@ public class ApiController {
 
     @PostMapping("/stream/search")
     public ResponseEntity<String> search(@RequestBody Map<String, String> body) {
-        return proxy(MEDIA + "/media/search/", body.getOrDefault("q", ""));
+        return proxy(MEDIA + "/media/search/?internal=1", body.getOrDefault("q", ""));
     }
 
     @PostMapping("/stream/enqueue")

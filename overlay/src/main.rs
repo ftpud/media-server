@@ -107,7 +107,7 @@ fn prog(t: f64, start: f64, len: f64) -> f64 { ((t - start) / len).clamp(0.0, 1.
 struct Feed {
     status: Option<Value>,
     upcoming: Option<Vec<String>>,
-    list_at: Option<i64>,
+    state: Option<Value>, // media-service /media/overlay/state: last !list and !search
 }
 
 fn spawn_poller(mediad: String, media: String) -> (Arc<Mutex<Feed>>, Arc<AtomicBool>) {
@@ -118,9 +118,7 @@ fn spawn_poller(mediad: String, media: String) -> (Arc<Mutex<Feed>>, Arc<AtomicB
         let mut last_up = Instant::now() - Duration::from_secs(60);
         loop {
             if let Ok(s) = get_json(&mediad, "/status") { f2.lock().unwrap().status = Some(s); }
-            if let Ok(v) = get_json(&media, "/media/list/requested") {
-                if let Some(at) = v["at"].as_i64() { f2.lock().unwrap().list_at = Some(at); }
-            }
+            if let Ok(v) = get_json(&media, "/media/overlay/state") { f2.lock().unwrap().state = Some(v); }
             if r2.swap(false, Ordering::SeqCst) || last_up.elapsed() >= Duration::from_secs(10) {
                 last_up = Instant::now();
                 if let Ok(Value::Array(items)) = get_json(&media, "/media/list?internal=1") {
@@ -195,27 +193,42 @@ fn render_next(tr: &mut TextRenderer, title: &str) -> Canvas {
     c
 }
 
-/// One row of the !list panel (index 0 = header).
-fn render_row(tr: &mut TextRenderer, i: usize, title: &str) -> Canvas {
-    let h = if i == 0 { 34 } else { 38 };
-    if i == 0 {
-        let mut c = Canvas::new(170, h);
-        c.round_rect(0.0, 0.0, 170.0, h as f32, 12.0, BG);
-        c.gradient_rect(0.0, h as f32 - 3.0, 170.0, 3.0, ACCENT, PINK);
-        tr.bold(&mut c, "UP NEXT", 16.0, 8.0, 17.0, WHITE, 160.0);
-        return c;
-    }
+/// Panel header: a label and an optional subtitle (e.g. the search query).
+fn render_header(tr: &mut TextRenderer, label: &str, sub: &str) -> Canvas {
+    let h = 34;
+    let sub = tr.fit(sub, 16.0, 420.0);
+    let lw = tr.width(label, 17.0);
+    let w = (16.0 + lw + if sub.is_empty() { 0.0 } else { tr.width(&sub, 16.0) + 18.0 } + 18.0).max(150.0).ceil() as usize;
+    let mut c = Canvas::new(w, h);
+    c.round_rect(0.0, 0.0, w as f32, h as f32, 12.0, BG);
+    c.gradient_rect(0.0, h as f32 - 3.0, w as f32, 3.0, ACCENT, PINK);
+    tr.bold(&mut c, label, 16.0, 8.0, 17.0, WHITE, w as f32);
+    if !sub.is_empty() { tr.text(&mut c, &sub, 16.0 + lw + 14.0, 9.0, 16.0, MUTED, w as f32); }
+    c
+}
+
+/// Panel row: number, song, artist, optional REQUEST tag.
+fn render_item(tr: &mut TextRenderer, num: &str, title: &str, highlight: bool, request: bool) -> Canvas {
+    let h = 38;
     let (artist, song) = split_title(title);
     let song = tr.fit(&song, 19.0, 440.0);
     let artist = tr.fit(&artist, 16.0, 220.0);
     let sw = tr.width(&song, 19.0);
     let aw = if artist.is_empty() { 0.0 } else { tr.width(&artist, 16.0) + 14.0 };
-    let w = (44.0 + sw + aw + 18.0).max(240.0).ceil() as usize;
+    let rw = if request { 86.0 } else { 0.0 };
+    let nw = tr.width(num, 19.0).max(12.0);
+    let x_text = 20.0 + nw + 14.0;
+    let w = (x_text + sw + aw + rw + 18.0).max(240.0).ceil() as usize;
     let mut c = Canvas::new(w, h);
     c.round_rect(0.0, 0.0, w as f32, h as f32 - 4.0, 10.0, BG_SOFT);
-    tr.bold(&mut c, &format!("{i}"), 14.0, 7.0, 19.0, if i == 1 { PINK } else { ACCENT }, 30.0);
-    tr.text(&mut c, &song, 44.0, 7.0, 19.0, WHITE, w as f32);
-    if !artist.is_empty() { tr.text(&mut c, &artist, 44.0 + sw + 14.0, 9.0, 16.0, MUTED, w as f32); }
+    tr.bold(&mut c, num, 16.0, 7.0, 19.0, if highlight { PINK } else { ACCENT }, 40.0);
+    tr.text(&mut c, &song, x_text, 7.0, 19.0, WHITE, w as f32);
+    if !artist.is_empty() { tr.text(&mut c, &artist, x_text + sw + 14.0, 9.0, 16.0, MUTED, w as f32); }
+    if request {
+        let rx = x_text + sw + aw + 8.0;
+        c.round_rect(rx, 8.0, 74.0, 20.0, 7.0, Rgba(165, 139, 255, 70));
+        tr.text(&mut c, "REQUEST", rx + 8.0, 9.0, 13.0, ACCENT, 70.0);
+    }
     c
 }
 
@@ -236,14 +249,15 @@ fn main() -> Result<()> {
     let mut next_for = String::new();
     let mut list_t0: Option<Instant> = None;
     let mut list_seen: Option<i64> = None;
+    let mut search_seen: Option<i64> = None;
     let mut status_at = Instant::now();
 
     loop {
         let tick = Instant::now();
         // ---------------- data ----------------
-        let (status, up, list_at) = {
+        let (status, up, state) = {
             let mut f = feed.lock().unwrap();
-            (f.status.take(), f.upcoming.take(), f.list_at.take())
+            (f.status.take(), f.upcoming.take(), f.state.take())
         };
         if let Some(s) = status {
             let c = &s["current"];
@@ -264,16 +278,34 @@ fn main() -> Result<()> {
             }
         }
         if let Some(u) = up { upcoming = u; }
-        if let Some(at) = list_at {
+        if let Some(st) = state {
+            let at = st["list_at"].as_i64().unwrap_or(0);
             if list_seen.map(|s| s != at).unwrap_or(false) && at > 0 {
-                // a user typed !list: build the panel from the freshest queue
+                // a user typed !list: the queue as a panel
                 refresh.store(true, Ordering::SeqCst);
-                layers.rows = std::iter::once(render_row(&mut tr, 0, ""))
-                    .chain(upcoming.iter().take(LIST_ROWS).enumerate().map(|(i, t)| render_row(&mut tr, i + 1, t)))
+                layers.rows = std::iter::once(render_header(&mut tr, "UP NEXT", ""))
+                    .chain(upcoming.iter().take(LIST_ROWS).enumerate().map(|(i, t)| render_item(&mut tr, &format!("{}", i + 1), t, i == 0, false)))
                     .collect();
                 list_t0 = Some(Instant::now());
             }
             list_seen = Some(at);
+            let sr = &st["search"];
+            let sat = sr["at"].as_i64().unwrap_or(0);
+            if search_seen.map(|s| s != sat).unwrap_or(false) && sat > 0 {
+                // a user typed !search: numbered like the chat (from 0) so "!select N" matches
+                let total = sr["total"].as_i64().unwrap_or(0);
+                let query = format!("“{}”", sr["query"].as_str().unwrap_or(""));
+                let sub = if total == 0 { format!("{query}  ·  nothing found") } else if total > LIST_ROWS as i64 { format!("{query}  ·  {total} found") } else { query };
+                let mut rows = vec![render_header(&mut tr, "SEARCH", &sub)];
+                if let Some(items) = sr["results"].as_array() {
+                    for (i, it) in items.iter().enumerate() {
+                        rows.push(render_item(&mut tr, &format!("{i}"), it["title"].as_str().unwrap_or(""), i == 0, it["request"].as_bool().unwrap_or(false)));
+                    }
+                }
+                layers.rows = rows;
+                list_t0 = Some(Instant::now());
+            }
+            search_seen = Some(sat);
         }
         // position advances between status polls
         let pos_now = pos + status_at.elapsed().as_millis() as i64;
