@@ -127,16 +127,16 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 ## Phase 5: Test and soak
 
 - [ ] Unit/integration tests for the control API and clock (synthetic sources, e.g. `testsrc` / `sine`).
-- [ ] Run mediad next to production on a separate RTMP app (`rtmp://localhost/test`), off-peak, for 24 h+.
-- [ ] Fault tests: corrupt file, missing file, zero-length file, file without audio, very long file, `!next` / `!time` spam, RTMP server restart, media-service restart.
+- [x] Run mediad next to production on a separate RTMP app (`rtmp://localhost/test`), off-peak, for 24 h+.
+- [x] Fault tests: corrupt file, missing file, zero-length file, file without audio, very long file, `!next` / `!time` spam, RTMP server restart, media-service restart.
 - [ ] Check A/V sync after several hours (clock drift) and memory growth of the mediad process.
 - [ ] Compare against baseline: CPU, RSS, dropped frames, reconnect count.
 
 ## Phase 6: Cutover and cleanup
 
 - [x] Add a watchdog/supervisor for mediad (restart within seconds on crash).
-- [ ] Cut over: stop publisher-service, balance-service and the old `ffmpeg_stream` concat process, start mediad on `rtmp://localhost/main`. Keep the old services deployable for rollback.
-- [ ] Verify with the real viewers' player: no reconnect at track changes.
+- [x] Cut over: stop publisher-service, balance-service and the old `ffmpeg_stream` concat process, start mediad on `rtmp://localhost/main`. Keep the old services deployable for rollback.
+- [x] Verify with the real viewers' player: no reconnect at track changes.
 - [ ] After a stable period, remove `publisher-service`, `balance-service`, `list.txt`, the FIFOs, `detectAbnormality`, and the dashboard entries.
 - [ ] Update `README.md`.
 
@@ -160,6 +160,14 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - **Java**: mediad driver in stream-service (opt-in), `/media/sync`, review fixes (see commit a9c0ec4), production-only behavior recovered from the deployed jar and ported (rotation = `___UNDERGROUND` only, `≫　Artist／Song` titles). The deployed jars of chat-service and dashboard-service also differ from git (uncommitted changes on the build machine): they are NOT redeployed; commit that source before changing them. The deployed media-service also contained unused AI classes (AiProcessor/ChatGpt) - intentionally dropped.
 - **Ops**: logrotate installed (`/etc/logrotate.d/media-server`), `deploy/cutover.sh` + `deploy/rollback.sh`, staging in `/home/ftpud/deploy-staging`.
 - Incident during testing: a sandbox media-service (using the production `config.properties`) called the production stream-service `/media/restart` once (2026-11-18 02:10:59, ~1-2 s glitch). Sandboxes must override `media.*.uri/url`.
+
+## Cutover log (2026-11-18)
+
+- 02:30 first attempt failed: media-service took ~6 min to start (library scan before the web server), cutover waited 3 min and rolled back; during the rollback the stream was down for up to ~5 min until 02:40:16. Fixed: rotation loads from the DB at startup (4 s), scan runs in the background; rollback no longer starts a second publisher.
+- **02:42:38 cutover done**: production runs on mediad (`/home/ftpud/media-server/app/mediad.sh` supervisor -> `ext/mediad`, port 8095), stream-service in mediad mode (`media.mediad.enabled=true` in `config.properties`), new media-service. Switch gap ~20 s. First track change verified: queued on `track_ending`, crossfade, media-service re-synced within 20 ms, 0 late frames, load average dropped from ~10 to ~3.
+- Backups: `app/backup-20261118-024211` (and `-023015`); rollback: `app/rollback.sh`.
+- The old dashboard does not know mediad and shows publisher/balancer/ffmpeg as down - do NOT start publisher-service from it while mediad runs (two publishers on `main`). Fixed by Phase 9.
+- Hardware: `/mnt/content/500GB` (sdc) has unrecoverable read errors + ext4 errors -> back it up / replace it.
 
 ## Phase 9: Dashboard rewrite (last phase)
 
