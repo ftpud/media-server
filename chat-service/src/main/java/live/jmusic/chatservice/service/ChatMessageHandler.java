@@ -51,6 +51,15 @@ public class ChatMessageHandler extends ChatMessageHandlerBase {
                     consoleUtilService.youtubeDl(r.group(1), r.group(2), restRequestService);
                 }, this::isModerator);
 
+        registerEvent("^!clip ([^ ]+?) ([^ ]+-[^ ]+) (.+)$",
+                r -> {
+                    log.info("1:" + r.group(1));
+                    log.info("2:", r.group(2));
+                    log.info("3:" + r.group(3));
+
+                    consoleUtilService.youtubeDlWithTimeRange(r.group(1), r.group(3), r.group(2), restRequestService);
+                }, this::isModerator);
+
         registerEvent("^!list$",
                 r -> list(), this::everyone);
 

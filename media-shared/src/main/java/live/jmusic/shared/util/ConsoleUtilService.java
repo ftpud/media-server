@@ -5,31 +5,77 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 public class ConsoleUtilService {
 
-    int ytb_file_number = 0;
 
     public void youtubeDl(String url, String fileName, RestRequestService restRequestService) {
-        log.info("Invoking youtube dl");
-        ytb_file_number++;
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "yt-dlp",
+
+        String name = String.valueOf(System.currentTimeMillis());
+
+        String[] cmd = new String[] {"yt-dlp",
                 "-f",
                 "bestvideo[height<=1080]+bestaudio[ext=m4a]/bestvideo+bestaudio",
                 "--merge-output-format",
                 "mkv",
                 url,
                 "-o",
-                "/tmp/youtube" + ytb_file_number + ".tmp");
+                "/tmp/youtube" + name + ".tmp"};
+
+        runYoutubeDl(cmd, fileName, name, restRequestService);
+    }
+
+    public void youtubeDlWithTimeRange(String url, String fileName, String timeRange, RestRequestService restRequestService) {
+
+        String[] cmd = new String[]{"yt-dlp",
+                "-f",
+                "bestvideo[height<=1080]+bestaudio[ext=m4a]/bestvideo+bestaudio",
+                "--merge-output-format",
+                "mkv",
+                "--download-sections",
+                "*".concat(timeRange),
+                "--force-keyframes-at-cuts",
+                url,
+                "-o",
+                "/mnt/1tb_m2/user/akb/yt/" + fileName + ".mkv"};
+
+
+        try {
+            log.info("Invoking youtube dl");
+            log.info("yt-dlp cmd:" + Arrays.stream(cmd).collect(Collectors.joining(" ")));
+
+
+            ProcessBuilder processBuilder = new ProcessBuilder(cmd);
+            processBuilder.redirectErrorStream(true);
+
+            runBashCommand(processBuilder.start(), true, response -> {
+                        restRequestService.sendLiveMessage(fileName.replaceAll("[^a-zA-Z]", ""), "+" + response);
+                        System.out.println(response);
+                    }
+            );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void runYoutubeDl(String[] cmd, String fileName, String tmpName, RestRequestService restRequestService) {
+        log.info("Invoking youtube dl");
+        log.info("yt-dlp cmd:" + Arrays.stream(cmd).collect(Collectors.joining(" ")));
+
+
+        ProcessBuilder processBuilder = new ProcessBuilder(cmd);
         processBuilder.redirectErrorStream(true);
 
 
@@ -41,7 +87,7 @@ public class ConsoleUtilService {
             );
 
 
-            Path f = new File("/tmp/youtube" + ytb_file_number + ".tmp.mkv").toPath();
+            Path f = new File("/tmp/youtube" + tmpName + ".tmp.mkv").toPath();
             Path output = Paths.get("/mnt/1tb_m2/user/akb/RequestOnly/youtubedl/", fileName + ".mkv");
             Files.move(f, output, StandardCopyOption.REPLACE_EXISTING);
         } catch (Exception e) {

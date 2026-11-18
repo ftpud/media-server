@@ -35,6 +35,7 @@ public class FfmpegHelper {
                 .withReload(1)
                 .buildDrawText()
 
+                //.withZmq()
                 .withSubtitles(subtitlesFilter)
 
                 // ZMQ slots

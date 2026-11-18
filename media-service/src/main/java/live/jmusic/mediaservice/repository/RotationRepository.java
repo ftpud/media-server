@@ -25,7 +25,8 @@ public class RotationRepository {
         rotationList = mediaRepository
                 .findAll()
                 .stream()
-                .filter(mediaItem -> !mediaItem.getFullpath().contains("RequestOnly"))
+                //.filter(mediaItem -> !mediaItem.getFullpath().contains("RequestOnly"))
+                .filter(mediaItem -> mediaItem.getFullpath().contains("___UNDERGROUND"))
                 .collect(Collectors.toList());
 
         Collections.shuffle(rotationList);

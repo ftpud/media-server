@@ -113,6 +113,14 @@ public class MediaController {
             log.info("Fixing volume initiated");
             restRequestService.requestVolumeFix(item.getMediaItem().getId());
         }
+
+        // Specific rule for [UG] files
+        if(!item.getMediaItem().title.startsWith("≫　") && item.getMediaItem().fullpath.contains("___UNDERGROUND/")) {
+            String title = item.getMediaItem().fullpath.split("___UNDERGROUND/")[1];
+            // remove extension from title
+            title = title.substring(0, title.lastIndexOf('.'));
+            item.getMediaItem().setTitle("≫　" + title.replace("/", "／"));
+        }
         return item;
     }
 
