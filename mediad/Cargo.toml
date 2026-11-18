@@ -1,0 +1,9 @@
+[package]
+name = "mediad"
+version = "0.1.0"
+edition = "2021"
+description = "Persistent ffmpeg-based compositor/encoder for the media server"
+
+[dependencies]
+ffmpeg-next = "7.1"
+anyhow = "1"
