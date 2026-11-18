@@ -38,10 +38,10 @@ const BIG_HOLD: f64 = 5.0; // big card visible until
 const MORPH: f64 = 0.6; // big -> pill
 const NEXT_AT_MS: i64 = 30_000; // banner this long before the end
 const NEXT_IN: f64 = 0.55;
-const LIST_ROWS: usize = 15; // entries in a !list / !search panel
-const PAGE_SIZE: usize = 5; // entries per page
-const PAGE_SECS: f64 = 5.0; // page rotation
-const LIST_STAGGER: f64 = 0.07;
+const LIST_ROWS: usize = 30; // entries in a !list / !search panel (the chat bot returns up to 30)
+const PAGE_SIZE: usize = 7; // entries per page
+const PAGE_SECS: f64 = 8.0; // page rotation
+const LIST_STAGGER: f64 = 0.035;
 const LIST_IN: f64 = 0.45;
 const LIST_HOLD: f64 = 12.0;
 const LIST_OUT: f64 = 0.4;
@@ -58,8 +58,8 @@ struct Args {
 fn args() -> Args {
     let a: Vec<String> = std::env::args().skip(1).collect();
     let get = |k: &str, d: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1)).cloned().unwrap_or_else(|| d.to_string());
-    let size = get("--size", "1000x440");
-    let (w, h) = size.split_once('x').map(|(w, h)| (w.parse().unwrap_or(1000), h.parse().unwrap_or(440))).unwrap_or((1000, 440));
+    let size = get("--size", "1000x660");
+    let (w, h) = size.split_once('x').map(|(w, h)| (w.parse().unwrap_or(1000), h.parse().unwrap_or(660))).unwrap_or((1000, 660));
     Args {
         target: get("--target", "127.0.0.1:8096"),
         mediad: get("--mediad", "127.0.0.1:8095"),
@@ -211,25 +211,26 @@ fn render_header(tr: &mut TextRenderer, label: &str, sub: &str) -> Canvas {
 
 /// Panel row: number, song, artist, optional REQUEST tag.
 fn render_item(tr: &mut TextRenderer, num: &str, title: &str, highlight: bool, request: bool) -> Canvas {
-    let h = 38;
+    // compact: 15 rows per page must fit under the title
+    let h = 33;
     let (artist, song) = split_title(title);
-    let song = tr.fit(&song, 19.0, 440.0);
-    let artist = tr.fit(&artist, 16.0, 220.0);
-    let sw = tr.width(&song, 19.0);
-    let aw = if artist.is_empty() { 0.0 } else { tr.width(&artist, 16.0) + 14.0 };
-    let rw = if request { 86.0 } else { 0.0 };
-    let nw = tr.width(num, 19.0).max(12.0);
-    let x_text = 20.0 + nw + 14.0;
-    let w = (x_text + sw + aw + rw + 18.0).max(240.0).ceil() as usize;
+    let song = tr.fit(&song, 17.0, 440.0);
+    let artist = tr.fit(&artist, 14.0, 220.0);
+    let sw = tr.width(&song, 17.0);
+    let aw = if artist.is_empty() { 0.0 } else { tr.width(&artist, 14.0) + 12.0 };
+    let rw = if request { 76.0 } else { 0.0 };
+    let x_text = 46.0;
+    let w = (x_text + sw + aw + rw + 16.0).max(220.0).ceil() as usize;
     let mut c = Canvas::new(w, h);
-    c.round_rect(0.0, 0.0, w as f32, h as f32 - 4.0, 10.0, BG_SOFT);
-    tr.bold(&mut c, num, 16.0, 7.0, 19.0, if highlight { PINK } else { ACCENT }, 40.0);
-    tr.text(&mut c, &song, x_text, 7.0, 19.0, WHITE, w as f32);
-    if !artist.is_empty() { tr.text(&mut c, &artist, x_text + sw + 14.0, 9.0, 16.0, MUTED, w as f32); }
+    c.round_rect(0.0, 0.0, w as f32, h as f32 - 3.0, 9.0, BG_SOFT);
+    let nw = tr.width(num, 17.0);
+    tr.bold(&mut c, num, 34.0 - nw, 6.0, 17.0, if highlight { PINK } else { ACCENT }, 40.0);
+    tr.text(&mut c, &song, x_text, 6.0, 17.0, WHITE, w as f32);
+    if !artist.is_empty() { tr.text(&mut c, &artist, x_text + sw + 12.0, 8.0, 14.0, MUTED, w as f32); }
     if request {
-        let rx = x_text + sw + aw + 8.0;
-        c.round_rect(rx, 8.0, 74.0, 20.0, 7.0, Rgba(165, 139, 255, 70));
-        tr.text(&mut c, "REQUEST", rx + 8.0, 9.0, 13.0, ACCENT, 70.0);
+        let rx = x_text + sw + aw + 6.0;
+        c.round_rect(rx, 7.0, 66.0, 17.0, 6.0, Rgba(165, 139, 255, 70));
+        tr.text(&mut c, "REQUEST", rx + 7.0, 7.5, 11.5, ACCENT, 62.0);
     }
     c
 }
@@ -416,12 +417,12 @@ fn main() -> Result<()> {
                         let kout = if last {
                             prog(lt, end - 0.25 + (n - 1 - j) as f64 * LIST_STAGGER * 0.6, LIST_OUT)
                         } else {
-                            prog(pt, page_len - 0.45 + j as f64 * 0.05, 0.3)
+                            prog(pt, page_len - 0.5 + j as f64 * 0.02, 0.3)
                         };
                         let (angle, slide, alpha) = row_anim(kin, kout);
                         let (rw, rh) = (row.w as f32, row.h as f32);
                         out.draw(row, X0 + rw / 2.0 + slide, y + rh / 2.0, 1.0, 0.0, angle.to_radians(), alpha, FOCAL);
-                        y += rh + 4.0;
+                        y += rh + 2.0;
                         animating |= (kin > 0.0 && kin < 1.0) || (kout > 0.0 && kout < 1.0);
                     }
                     animating |= pt < LIST_STAGGER * (n + 1) as f64 + LIST_IN;
@@ -433,7 +434,13 @@ fn main() -> Result<()> {
         if conn.is_none() && last_try.elapsed() >= Duration::from_secs(2) {
             last_try = Instant::now();
             conn = TcpStream::connect(&a.target).ok();
-            if conn.is_some() { eprintln!("connected to {}", a.target); }
+            if let Some(c) = conn.as_mut() {
+                // tell mediad our frame size, so it never has to be configured twice
+                let mut hello = b"OVL1".to_vec();
+                hello.extend((a.w as u32).to_le_bytes());
+                hello.extend((a.h as u32).to_le_bytes());
+                if c.write_all(&hello).is_err() { conn = None; } else { eprintln!("connected to {} ({}x{})", a.target, a.w, a.h); }
+            }
         }
         if animating {
             if let Ok(dir) = std::env::var("OVERLAY_DUMP") {

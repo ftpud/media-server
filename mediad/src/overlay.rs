@@ -58,11 +58,30 @@ pub fn listen(cfg: &OverlayCfg) -> std::io::Result<Latest> {
     let (w, h, out) = (cfg.w, cfg.h, latest.clone());
     std::thread::spawn(move || {
         for c in l.incoming().flatten() {
-            eprintln!("overlay client connected");
             let mut c = c;
-            let mut buf = vec![0u8; w * h * 4];
-            while c.read_exact(&mut buf).is_ok() {
-                *out.lock().unwrap() = Some(Arc::new(convert(&buf, w, h)));
+            // Optional handshake "OVL1" + width + height (u32 LE): the client decides its size.
+            // Without it (older clients) the configured size is used and the 4 bytes are pixels.
+            let mut magic = [0u8; 4];
+            if c.read_exact(&mut magic).is_err() { continue; }
+            let (mut fw, mut fh, mut pre) = (w, h, magic.to_vec());
+            if &magic == b"OVL1" {
+                let mut dims = [0u8; 8];
+                if c.read_exact(&mut dims).is_err() { continue; }
+                let cw = u32::from_le_bytes(dims[0..4].try_into().unwrap()) as usize;
+                let ch = u32::from_le_bytes(dims[4..8].try_into().unwrap()) as usize;
+                if cw == 0 || ch == 0 || cw * ch > 4096 * 4096 { continue; }
+                fw = cw;
+                fh = ch;
+                pre.clear();
+            }
+            eprintln!("overlay client connected ({fw}x{fh})");
+            let mut buf = vec![0u8; fw * fh * 4];
+            loop {
+                let start = pre.len();
+                buf[..start].copy_from_slice(&pre);
+                pre.clear();
+                if c.read_exact(&mut buf[start..]).is_err() { break; }
+                *out.lock().unwrap() = Some(Arc::new(convert(&buf, fw, fh)));
             }
             *out.lock().unwrap() = None;
             eprintln!("overlay client disconnected");

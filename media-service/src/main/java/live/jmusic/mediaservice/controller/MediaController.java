@@ -146,7 +146,7 @@ public class MediaController {
         if (internal == null) {
             // a chat !search: let the overlay show the results (numbered like the chat, from 0)
             List<Map<String, Object>> shown = new ArrayList<>();
-            for (MediaItem m : found.subList(0, Math.min(15, found.size()))) {
+            for (MediaItem m : found.subList(0, Math.min(30, found.size()))) {
                 shown.add(Map.of("title", displayTitle(m), "request", m.getFullpath().contains("RequestOnly")));
             }
             lastSearch = Map.of("at", System.currentTimeMillis(), "query", item.trim(), "total", found.size(), "results", shown);
