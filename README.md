@@ -4,7 +4,8 @@ Set of services that streams a media library 24/7 to RTMP, controlled from chat 
 
 Created for personal usage.
 
-![image](https://github.com/ftpud/media-server/assets/7257224/7bf40afd-95ad-4e9d-9539-a80f34ede6d9)
+<img width="2850" height="1695" alt="image" src="https://github.com/user-attachments/assets/12fbc761-172e-4406-ab30-5dbfa26ef502" />
+
 
 ## Architecture
 
