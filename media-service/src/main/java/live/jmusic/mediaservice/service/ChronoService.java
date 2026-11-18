@@ -19,6 +19,12 @@ public class ChronoService {
         return offset + ChronoUnit.MILLIS.between(startTime, LocalDateTime.now());
     }
 
+    /** Re-anchor the rotation position (used to sync with the external player). */
+    public static synchronized void setPointer(long ms) {
+        startTime = LocalDateTime.now();
+        offset = ms;
+    }
+
     public static void resetTime() {
         startTime = LocalDateTime.now();
         offset = 0;

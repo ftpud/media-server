@@ -70,6 +70,21 @@ public class SubtitlesService {
     }
 
 
+    /** For mediad: converts the matching subtitle file (aligned to startMs) to a unique temp file, returns its path. */
+    public Optional<String> buildSubtitlesFile(live.jmusic.shared.model.MediaItem item, long startMs) {
+        for (String ext : supportedSubtitles.keySet()) {
+            Optional<String> file = getSubtitlesFile(item.getFullpath(), ext);
+            if (file.isPresent()) {
+                String target = String.format("/tmp/mediad_sub_%s_%d.%s", item.getId(), System.nanoTime(), ext);
+                runSubtitlesConvertProcess(file.get(), target, startMs);
+                if (new File(target).exists()) {
+                    return Optional.of(target);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
     public Optional<String> buildSubtitles(RotationItem rotationItem) {
         Optional<String> subtitleFilter = getSubtitlesVideoFilter(rotationItem);
         return subtitleFilter;

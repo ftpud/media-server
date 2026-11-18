@@ -76,9 +76,9 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [x] (scale+pad+setsar+fps+drawtext done; subtitles and live-text reload still TODO) Filter graph per track: scale + pad to 1920x1080 (same as `FfmpegHelper`), drawtext for title and for the live text file (`reload=1`), optional subtitles (`ass` / `subtitles`).
 - [x] (44.1k stereo fltp, 1024-sample frames; per-track gain still TODO) Audio: decode, resample to 44.1 kHz stereo, apply gain in dB per track.
 - [~] (single persistent encoders + one muxer done, writes mp4/flv/ts files; RTMP target not yet tested) Single encoder + FLV mux + RTMP output (`rtmp://localhost/main`, same target as today's publisher).
-- [ ] Filler frames and silence when no track is ready (decoder error, missing file, end of list), so the encoder never starves.
-- [ ] RTMP reconnect inside the process (encoder keeps running, resume on a keyframe).
-- [ ] Logging to `logs/mediad.log` with rotation; periodic stats line (fps, queue depth, dropped frames).
+- [x] Filler frames and silence when no track is ready (decoder error, missing file, end of list), so the encoder never starves.
+- [x] RTMP reconnect inside the process (encoder keeps running, resume on a keyframe).
+- [x] Logging to `logs/mediad.log` with rotation; periodic stats line (fps, queue depth, dropped frames).
 
 ### Daemon status (mediad/src/{main,engine,api}.rs) - tested 2026-11-18
 
@@ -91,12 +91,26 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - **Known drift:** audio ends ~16 ms after video per track (AAC 1024-sample padding), i.e. seconds per day. Fix: carry the audio/video debt across tracks (trim or pad audio to the video length, keep a running sample debt) and verify over a long run.
 - Still TODO in Phase 2: QSV decode with automatic software fallback (see census table), real-time pacing (`-re`-like) for RTMP, RTMP output + in-process reconnect, filler frames/silence, per-track gain, subtitles, deinterlace by `field_order`, run as root for file access, logging/stats.
 
+### Java integration status (opt-in, default OFF: `media.mediad.enabled=false`)
+
+- Done (compiles; NOT yet run end-to-end): `stream-service` `MediadStreamService` (long-polls mediad events; queues next track on `track_ending`, re-anchors media-service on `track_started`, refills on `idle`, seek/next via `/media/restart` -> clear + load now); `media-service` `POST /media/sync/{startMs}` (+ `ChronoService.setPointer`, `RotationRepository.syncTo`, `listNext` bounds fix); `SubtitlesService.buildSubtitlesFile` (unique temp file); dashboard knows `mediad` (`./mediad.sh` in the app dir, log `mediad.log`); `mediad/run-mediad.sh` launcher.
+- Design note: media-service keeps owning the rotation order/queue/endpoints unchanged; only its time pointer is re-synced from mediad, which removes wall-clock drift without rewriting the rotation. A full cursor-based rotation is still desirable later (end-of-list wrap, `putNextQueued` bounds, thread safety).
+- Known gaps: stale `/tmp/mediad_sub_*` files are not cleaned up; a wrap at the end of the rotation shows ~1 s of filler until `/media/now` reshuffles; `!seek`/`!next` go through restart (clear + load) so there is a short gap.
+
+### Cutover checklist (needs the owner, touches production)
+
+1. `cargo build --release` in `mediad/` (running); copy `mediad/run-mediad.sh` to `/home/ftpud/media-server/app/mediad.sh`.
+2. Dry run: start mediad with `MEDIAD_OUT=rtmp://localhost/<test-app>` and `MEDIAD_PORT=8095`, stream-service with `media.mediad.enabled=true` in its `config.properties` (separate instance/port), watch `mediad.log`.
+3. Soak 24h; compare reconnects/CPU/load against the baseline in Phase 0.
+4. Cutover: stop publisher-service, balance-service and `ffmpeg_stream` concat, start mediad on `rtmp://localhost/main`, set `media.mediad.enabled=true`, restart stream-service.
+5. Rollback: set `media.mediad.enabled=false`, stop mediad, start publisher/balance again.
+
 ## Phase 3: Control API and events
 
-- [ ] Local control API (Unix socket or HTTP on localhost): `load` (path, start offset, gain dB, title, subtitle file), `skip`, `seek`, `status`.
-- [ ] Events back to the caller: `track_started`, `track_ending` (N seconds before end, for pre-roll), `track_ended`, `track_error`, `position`.
+- [x] Local control API (Unix socket or HTTP on localhost): `load` (path, start offset, gain dB, title, subtitle file), `skip`, `seek`, `status`.
+- [x] Events back to the caller: `track_started`, `track_ending` (N seconds before end, for pre-roll), `track_ended`, `track_error`, `position`.
 - [ ] Pre-roll: open the next track's decoder a few seconds before the current one ends. Cancel and re-roll on `skip`/`seek`.
-- [ ] Define behavior for a bad file: log, emit `track_error`, play filler, continue.
+- [x] Define behavior for a bad file: log, emit `track_error`, play filler, continue.
 
 ## Phase 4: Java integration
 

@@ -26,6 +26,7 @@ class ServiceController {
             "media-service.jar",
             "stream-service.jar",
             "ffmpeg",
+            "mediad",
             "dashboard-service.jar"
     );
 
@@ -40,6 +41,7 @@ class ServiceController {
         serviceLogMap.put("media-service.jar", Collections.singletonList("media-service.log"));
         serviceLogMap.put("stream-service.jar", Collections.singletonList("stream-service.log"));
         serviceLogMap.put("ffmpeg", Collections.singletonList("---log-stream-ffmpeg.log"));
+        serviceLogMap.put("mediad", Collections.singletonList("mediad.log"));
         serviceLogMap.put("dashboard-service.jar", Arrays.asList("dashboard-service.log"));
     }
 
@@ -64,7 +66,9 @@ class ServiceController {
         validateService(service);
         // Remove '.jar' from service for logs path
         String logsService = service.replace(".jar", "");
-        String command = "nohup java -jar " + service + " --spring.config.location=classpath:/application.properties,config.properties > " + LOGS_PATH + logsService + ".log 2>&1 &";
+        String command = service.equals("mediad")
+                ? "nohup ./mediad.sh > " + LOGS_PATH + "mediad.log 2>&1 &"
+                : "nohup java -jar " + service + " --spring.config.location=classpath:/application.properties,config.properties > " + LOGS_PATH + logsService + ".log 2>&1 &";
         executeCommand(command);
         // If restarting 'publisher-service.jar', also restart 'balance-service.jar'
         if (service.equals("publisher-service.jar")) {
@@ -162,7 +166,7 @@ class ServiceController {
     }
 
     private boolean isServiceRunning(String service) {
-        String command = "pgrep -f " + service;
+        String command = "pgrep -f \"" + processPattern(service) + "\"";
         return !executeCommand(command).trim().isEmpty();
     }
 
@@ -174,8 +178,13 @@ class ServiceController {
         return validServices;
     }
 
+    private String processPattern(String service) {
+        // mediad is a native binary started through ./mediad.sh, match its real command line
+        return service.equals("mediad") ? "mediad --out" : service;
+    }
+
     private String getServicePid(String service) {
-        String command = "pgrep -f " + service;
+        String command = "pgrep -f \"" + processPattern(service) + "\"";
         return executeCommand(command).trim();
     }
 

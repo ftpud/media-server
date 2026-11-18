@@ -80,6 +80,11 @@ public class RestRequestService {
         });
     }
 
+    public void requestSync(String fullpath, long startMs) {
+        RestClient.recoverablePostRequest(coreServiceUri + "/media/sync/" + startMs, fullpath, String.class, r -> {
+        });
+    }
+
     public void requestVolumeFix(Long id) {
         RestClient.recoverableRequest(coreServiceUri + "/media/fixVolume/" + id, String.class, r -> {
         });

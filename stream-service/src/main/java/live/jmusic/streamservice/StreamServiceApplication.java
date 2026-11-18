@@ -1,5 +1,6 @@
 package live.jmusic.streamservice;
 
+import live.jmusic.streamservice.service.MediadStreamService;
 import live.jmusic.streamservice.service.StreamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +23,17 @@ public class StreamServiceApplication implements ApplicationRunner {
     @Autowired
     StreamService streamService;
 
+    @Autowired
+    MediadStreamService mediadStreamService;
+
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        streamService.run();
+        if (mediadStreamService.isEnabled()) {
+            mediadStreamService.run();
+        } else {
+            streamService.run();
+        }
     }
 
 }

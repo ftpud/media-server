@@ -66,10 +66,30 @@ public class RotationRepository {
     public List<MediaItem> listNext(long time, int number) {
         RotationItem item = getItemForTime(time);
         List<MediaItem> response = new ArrayList<>();
-        for(int i=0; i<number;i++) {
+        for(int i=0; i<number && item.rotationPosition + i < rotationList.size(); i++) {
             response.add(rotationList.get(item.rotationPosition + i));
         }
         return response;
+    }
+
+    /**
+     * Re-anchors the time pointer so that the item with this path starts "now" (plus startMs).
+     * Used when the external player reports which track it actually started. If the same file
+     * appears several times (queued copies) the occurrence closest to the current pointer wins.
+     */
+    public boolean syncTo(String fullpath, long startMs) {
+        long pointer = ChronoService.getTimePointer();
+        long acc = 0, best = -1, bestDist = Long.MAX_VALUE;
+        for (MediaItem m : rotationList) {
+            if (m.getFullpath().equals(fullpath)) {
+                long d = Math.abs(acc - pointer);
+                if (d < bestDist) { bestDist = d; best = acc; }
+            }
+            acc += m.getLength() == null ? 0 : m.getLength();
+        }
+        if (best < 0) return false;
+        ChronoService.setPointer(best + startMs);
+        return true;
     }
 
     public void putNextQueued(MediaItem mediaItem, boolean putFirst) {

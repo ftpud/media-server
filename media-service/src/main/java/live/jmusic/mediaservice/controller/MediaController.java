@@ -105,6 +105,11 @@ public class MediaController {
         return "ok";
     }
 
+    @PostMapping("/sync/{startMs}")
+    public String sync(@PathVariable("startMs") long startMs, @RequestBody String fullpath) {
+        return rotationRepository.syncTo(fullpath, startMs) ? "ok" : "unknown";
+    }
+
     @GetMapping("/now")
     public RotationItem now() {
 
