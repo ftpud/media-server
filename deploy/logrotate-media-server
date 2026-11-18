@@ -1,0 +1,13 @@
+# install: cp deploy/logrotate-media-server /etc/logrotate.d/media-server
+# The services write via nohup redirection, so copytruncate keeps the open file handles valid.
+/home/ftpud/media-server/app/logs/*.log /home/ftpud/media-server/app/log-stream-ffmpeg.log {
+    daily
+    maxsize 100M
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su root root
+}
