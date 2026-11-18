@@ -80,7 +80,12 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [ ] RTMP reconnect inside the process (encoder keeps running, resume on a keyframe).
 - [ ] Logging to `logs/mediad.log` with rotation; periodic stats line (fps, queue depth, dropped frames).
 
-### Phase 2 status (skeleton in `mediad/src/main.rs`, tested)
+### Daemon status (mediad/src/{main,engine,api}.rs) - tested 2026-11-18
+
+- Done and tested: real-time pacing, filler (black+silence) when idle, RTMP output with detect-disconnect + reconnect (verified against a local ffmpeg RTMP listener that was killed and restarted), control API (`/load /skip /seek /clear /status /events`), events (`connected disconnected idle track_started track_ending track_ended track_error hwdec_fallback`), bad-track skipping, per-track gain, subtitles filter, live-text drawtext reload, yadif for interlaced frames, audio/video drift correction at track start, QSV decode with automatic software fallback (verified on h264/vp9/4K vp9/mpeg2/hevc = hardware; av1/mpeg4/10-bit h264 = software fallback).
+- Not done: soak test (hours), pre-roll of the next decoder, transitions, overlay input, zmq control, 10-bit/4:2:2 tonemapping, long-run drift measurement.
+
+### Older Phase 2 notes (first skeleton)
 
 - `mediad <out> <x264|qsv> <in1> [in2 ...]` plays files back-to-back into one output. Verified: 3 inputs of different fps/sample rate -> exactly 14 s, 420 frames @ 30 fps, no decode errors; a corrupt input is logged and skipped; QSV encode works (High profile).
 - **Known drift:** audio ends ~16 ms after video per track (AAC 1024-sample padding), i.e. seconds per day. Fix: carry the audio/video debt across tracks (trim or pad audio to the video length, keep a running sample debt) and verify over a long run.
