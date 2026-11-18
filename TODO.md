@@ -169,19 +169,26 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - The old dashboard does not know mediad and shows publisher/balancer/ffmpeg as down - do NOT start publisher-service from it while mediad runs (two publishers on `main`). Fixed by Phase 9.
 - Hardware: `/mnt/content/500GB` (sdc) has unrecoverable read errors + ext4 errors -> back it up / replace it.
 
-## Phase 9: Dashboard rewrite (last phase)
+## Phase 9: Dashboard rewrite (last phase) - DONE, deployed 2026-11-18 ~02:55
 
-Completely rewrite `dashboard-service` into a nice-looking, usable control panel for all services and daemons (Java services, mediad, ffmpeg), with good UI/UX.
+- [x] Inventory: mediad, stream-service, media-service, chat-service, live-service, dashboard itself, legacy publisher (+ balancer/concat ffmpeg).
+- [x] Backend: service model, /proc/<pid>/cmdline process matching, graceful stop (SIGTERM, then SIGKILL) including child processes, conflict guard mediad <-> publisher.
+- [x] Health + metrics: up/unhealthy/stopped, uptime, CPU, RSS per service; mediad status (now playing, position, HW/SW decode, A/V offset, late frames, queue) and the event feed.
+- [x] Logs: live tail over SSE (survives logrotate), filter, errors-only, level colors.
+- [x] Stream panel: next track, seek, on-screen message, library search with queue / play next, up next list.
+- [x] Server panel: load, memory, per-mount free space, read-only flag, per-drive I/O busy.
+- [x] UI: responsive single-page app, dark/light theme, confirmations for disruptive actions, toasts.
+- [x] Security: token login (`app/dashboard.token`, root-only), HttpOnly SameSite cookie, POST-only actions, no CORS.
+- [x] Deploy flow: jars in `/home/ftpud/media-server/deploy/` show a Deploy button; replaced jars are archived in `app/versions/` with one-click restore (the previous dashboard is archived there).
+- [ ] Not done: GPU stats (`intel_gpu_top` needs root + a sampling loop), output preview thumbnail, user accounts (single shared token).
 
-- [ ] Inventory what it must manage: every Java service, `mediad`, the old ffmpeg/publisher/balancer pair (until removed), and the RTMP target.
-- [ ] Backend: replace the shell-string `bash -c` process control with a proper service model (start/stop/restart/deploy, PID tracking without `pgrep -f` substring matching, no `kill -9` by default; graceful stop then force).
-- [ ] Health and metrics per service: up/down, uptime, CPU, RSS, restarts, last error; for mediad also `/status` (current track, position, queue, connected, A/V offset, hw/sw decode) and the event stream.
-- [ ] Logs: live tail (WebSocket/SSE) with search and level highlighting, instead of fetching the last 100 lines.
-- [ ] Stream panel: now playing, upcoming queue, skip/seek/load, overlay/zmq text controls, preview thumbnail of the output.
-- [ ] Server panel: load, CPU/GPU (`intel_gpu_top`), disk space per mount (`/` is nearly full), library stats.
-- [ ] UI: modern responsive single-page app (e.g. a small SPA with a component library), dark/light theme, clear status colors, confirmations for destructive actions, works on a phone.
-- [ ] Security: authentication (at least a token/password), POST for state changes, restrict CORS (the current API is unauthenticated GET-based).
-- [ ] Deploy flow: upload/build artifacts, versioned deploys, one-click rollback.
+## Open items for the owner
+
+- Back up and replace the failing disk `/mnt/content/500GB` (sdc): unrecoverable read errors, ext4 errors, now remounted read-only by the kernel. `/mnt/content/1TB_2` is 100% full and very slow under load.
+- Commit the source of the deployed chat-service (it differs from git); my chat fixes are on this branch but not deployed.
+- New uploads from `akb` arrive with mode 700 (set an upload umask of 022).
+- Secrets (API keys, stream keys) are stored in plain text in `config.properties` and `nginx.conf`; rotate if they were ever shared.
+- After a stable period: remove publisher/balance services, the FIFOs and `list.txt`; merge `experimental` into master.
 
 ## Risks to keep in mind
 
