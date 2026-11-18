@@ -17,6 +17,11 @@
 
 ## Architecture
 
+<img width="2850" height="1695" alt="image" src="https://github.com/user-attachments/assets/2936351f-6a1d-4bf7-acc9-f708aef3cc24" />
+
+<img width="2700" height="1440" alt="image" src="https://github.com/user-attachments/assets/f6520a72-b1c3-4de6-9de2-fc6d51b9691d" />
+
+
 ```mermaid
 flowchart LR
     audience["Twitch / GoodGame / sc2tv chat"] -->|commands and messages| chat
