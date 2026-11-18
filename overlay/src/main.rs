@@ -38,7 +38,9 @@ const BIG_HOLD: f64 = 5.0; // big card visible until
 const MORPH: f64 = 0.6; // big -> pill
 const NEXT_AT_MS: i64 = 30_000; // banner this long before the end
 const NEXT_IN: f64 = 0.55;
-const LIST_ROWS: usize = 8;
+const LIST_ROWS: usize = 15; // entries in a !list / !search panel
+const PAGE_SIZE: usize = 5; // entries per page
+const PAGE_SECS: f64 = 5.0; // page rotation
 const LIST_STAGGER: f64 = 0.07;
 const LIST_IN: f64 = 0.45;
 const LIST_HOLD: f64 = 12.0;
@@ -232,6 +234,12 @@ fn render_item(tr: &mut TextRenderer, num: &str, title: &str, highlight: bool, r
     c
 }
 
+/// How long a panel with `rows` rows (header included) stays up before it starts folding away.
+fn panel_end(rows: usize) -> f64 {
+    let pages = ((rows.saturating_sub(1) + PAGE_SIZE - 1) / PAGE_SIZE).max(1);
+    if pages > 1 { pages as f64 * PAGE_SECS } else { LIST_HOLD }
+}
+
 fn main() -> Result<()> {
     let a = args();
     let font = std::fs::read(&a.font)?;
@@ -295,7 +303,7 @@ fn main() -> Result<()> {
                 // a user typed !search: numbered like the chat (from 0) so "!select N" matches
                 let total = sr["total"].as_i64().unwrap_or(0);
                 let query = format!("“{}”", sr["query"].as_str().unwrap_or(""));
-                let sub = if total == 0 { format!("{query}  ·  nothing found") } else if total > LIST_ROWS as i64 { format!("{query}  ·  {total} found") } else { query };
+                let sub = if total == 0 { format!("{query}  ·  nothing found") } else if total > PAGE_SIZE as i64 { format!("{query}  ·  {total} found") } else { query };
                 let mut rows = vec![render_header(&mut tr, "SEARCH", &sub)];
                 if let Some(items) = sr["results"].as_array() {
                     for (i, it) in items.iter().enumerate() {
@@ -341,7 +349,7 @@ fn main() -> Result<()> {
             }
 
             // NEXT banner, 30 s before the end (not while the list panel is up)
-            let list_up = list_t0.map(|s| s.elapsed().as_secs_f64() < LIST_HOLD + LIST_OUT + 0.5).unwrap_or(false);
+            let list_up = list_t0.map(|s| s.elapsed().as_secs_f64() < panel_end(layers.rows.len()) + LIST_OUT + 0.5).unwrap_or(false);
             if remaining <= NEXT_AT_MS && remaining > 0 && t > BIG_HOLD + MORPH && !upcoming.is_empty() && !list_up {
                 if next_t0.is_none() || next_for != upcoming[0] {
                     next_for = upcoming[0].clone();
@@ -362,26 +370,61 @@ fn main() -> Result<()> {
                 animating |= k < 1.0;
             }
 
-            // !list panel: rows cascade in with a flip, hold, then fold away bottom-up
+            // !list / !search panel: header stays, pages of PAGE_SIZE rows rotate every PAGE_SECS
+            // (rows fold away, the next page flips in), then everything folds away
             if let Some(l0) = list_t0 {
                 let lt = l0.elapsed().as_secs_f64();
-                if lt > LIST_HOLD + LIST_OUT + LIST_STAGGER * layers.rows.len() as f64 + 0.2 {
+                let items = layers.rows.len().saturating_sub(1);
+                let pages = ((items + PAGE_SIZE - 1) / PAGE_SIZE).max(1);
+                let end = panel_end(layers.rows.len());
+                let page_len = end / pages as f64;
+                if lt > end + LIST_OUT + 0.4 || layers.rows.is_empty() {
                     list_t0 = None;
                 } else {
-                    let n = layers.rows.len();
-                    let mut y = Y0 + ph + 10.0;
-                    for (i, row) in layers.rows.iter().enumerate() {
-                        let kin = prog(lt, i as f64 * LIST_STAGGER, LIST_IN);
-                        let kout = prog(lt, LIST_HOLD + (n - 1 - i) as f64 * LIST_STAGGER * 0.6, LIST_OUT);
+                    let row_anim = |kin: f64, kout: f64| -> (f32, f32, f32) {
                         let angle = if kout > 0.0 { (90.0 * ease_in_out(kout)) as f32 } else { (-90.0 + 90.0 * ease_out_back(kin)) as f32 };
                         let slide = (1.0 - ease_in_out(kin)) as f32 * -40.0;
-                        let alpha = (kin.min(1.0) * (1.0 - kout)) as f32;
+                        (angle, slide, (kin.min(1.0) * (1.0 - kout)) as f32)
+                    };
+                    let mut y = Y0 + ph + 10.0;
+                    // header + page dots
+                    let hdr = &layers.rows[0];
+                    let (kin, kout) = (prog(lt, 0.0, LIST_IN), prog(lt, end, LIST_OUT));
+                    let (angle, slide, alpha) = row_anim(kin, kout);
+                    let (hw, hh) = (hdr.w as f32, hdr.h as f32);
+                    out.draw(hdr, X0 + hw / 2.0 + slide, y + hh / 2.0, 1.0, 0.0, angle.to_radians(), alpha, FOCAL);
+                    let page = ((lt / page_len) as usize).min(pages - 1);
+                    if pages > 1 {
+                        for i in 0..pages {
+                            let c = if i == page { PINK } else { Rgba(255, 255, 255, 90) };
+                            let c = Rgba(c.0, c.1, c.2, (c.3 as f32 * alpha) as u8);
+                            out.round_rect(X0 + hw + 12.0 + slide + i as f32 * 15.0, y + hh / 2.0 - 4.0, 8.0, 8.0, 4.0, c);
+                        }
+                    }
+                    animating |= (kin > 0.0 && kin < 1.0) || (kout > 0.0 && kout < 1.0);
+                    y += hh + 4.0;
+                    // rows of the current page
+                    let pt = lt - page as f64 * page_len;
+                    let last = page == pages - 1;
+                    let first = 1 + page * PAGE_SIZE;
+                    let upto = (first + PAGE_SIZE).min(layers.rows.len());
+                    let n = upto.saturating_sub(first);
+                    for (j, i) in (first..upto).enumerate() {
+                        let row = &layers.rows[i];
+                        let delay = (j + if page == 0 { 1 } else { 0 }) as f64 * LIST_STAGGER;
+                        let kin = prog(pt, delay, LIST_IN);
+                        let kout = if last {
+                            prog(lt, end - 0.25 + (n - 1 - j) as f64 * LIST_STAGGER * 0.6, LIST_OUT)
+                        } else {
+                            prog(pt, page_len - 0.45 + j as f64 * 0.05, 0.3)
+                        };
+                        let (angle, slide, alpha) = row_anim(kin, kout);
                         let (rw, rh) = (row.w as f32, row.h as f32);
                         out.draw(row, X0 + rw / 2.0 + slide, y + rh / 2.0, 1.0, 0.0, angle.to_radians(), alpha, FOCAL);
                         y += rh + 4.0;
                         animating |= (kin > 0.0 && kin < 1.0) || (kout > 0.0 && kout < 1.0);
                     }
-                    animating |= lt < LIST_STAGGER * n as f64 + LIST_IN;
+                    animating |= pt < LIST_STAGGER * (n + 1) as f64 + LIST_IN;
                 }
             }
         }
