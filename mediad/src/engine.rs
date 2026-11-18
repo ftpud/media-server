@@ -58,8 +58,12 @@ fn open_muxer(url: &str) -> Result<format::context::Output> {
 }
 
 fn sanitize(s: &str) -> String {
-    // drawtext: keep it simple and safe (', :, %, \ and friends are special)
-    s.chars().map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '.' || c == '(' || c == ')' { c } else { ' ' }).collect()
+    // drawtext text inside '...': keep all Unicode (titles are Japanese, "≫　A／B"), but
+    // drop backslashes/control chars, use a typographic apostrophe, and escape % (expansion)
+    s.chars()
+        .filter(|c| *c != '\\' && !c.is_control())
+        .map(|c| if c == '\'' { '\u{2019}'.to_string() } else if c == '%' { "\\%".to_string() } else { c.to_string() })
+        .collect()
 }
 
 fn esc_path(p: &str) -> String {

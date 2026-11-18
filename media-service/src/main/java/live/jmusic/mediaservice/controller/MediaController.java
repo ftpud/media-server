@@ -128,6 +128,7 @@ public class MediaController {
             Long id = item.getMediaItem().getId();
             CompletableFuture.runAsync(() -> restRequestService.requestVolumeFix(id));
         }
+        decorateTitle(item.getMediaItem());
         return item;
     }
 
@@ -156,7 +157,23 @@ public class MediaController {
 
     @GetMapping("/list")
     public List<MediaItem> list() {
-        return listNext(30);
+        List<MediaItem> items = listNext(30);
+        items.forEach(this::decorateTitle);
+        return items;
+    }
+
+    /** Stream title "≫　Artist／Song" from the path below ___UNDERGROUND/ (as in the deployed build). */
+    private void decorateTitle(MediaItem mi) {
+        if (mi == null || mi.title == null || mi.fullpath == null) {
+            return;
+        }
+        if (!mi.title.startsWith("\u226b\u3000") && mi.fullpath.contains("___UNDERGROUND/")) {
+            String name = mi.fullpath.split("___UNDERGROUND/")[1];
+            if (name.lastIndexOf('.') > 0) {
+                name = name.substring(0, name.lastIndexOf('.'));
+            }
+            mi.setTitle("\u226b\u3000" + name.replace("/", "\uff0f"));
+        }
     }
 
     private MediaItem enqueueItem(String item, boolean next) {
