@@ -182,6 +182,13 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [x] Deploy flow: jars in `/home/ftpud/media-server/deploy/` show a Deploy button; replaced jars are archived in `app/versions/` with one-click restore (the previous dashboard is archived there).
 - [ ] Not done: GPU stats (`intel_gpu_top` needs root + a sampling loop), output preview thumbnail, user accounts (single shared token).
 
+## Follow-up fixes (2026-11-18, staged in /home/ftpud/media-server/deploy, deploy from the dashboard)
+
+- Non-video entries (`._*`, `.DS_Store`, `chapters.txt`, torrents...) were handed to mediad by `/media/list`: media-service now cleans them from the DB at startup (677 on the production DB) and only lists playable videos (commit b855745).
+- Audio drift: per-track audio is now sample-accurate, late audio is tracked as debt and dropped (was: silence then permanently behind on long files); verified constant 23.2 ms (AAC codec delay, same as ffmpeg) over 8 tracks with crossfades (commit 8006ae0).
+- Crash: parallel drawtext/FreeType in decode threads corrupted the heap during pre-roll/crossfades; titles moved to the single-threaded post graph (commit 8006ae0). Production ran 5.5 h without hitting it, but the risk is real.
+- Deploy order: Dashboard (adds mediad binary deploys) -> mediad (~5 s interruption, stream-service reloads the current track) -> Media library.
+
 ## Open items for the owner
 
 - Back up and replace the failing disk `/mnt/content/500GB` (sdc): unrecoverable read errors, ext4 errors, now remounted read-only by the kernel. `/mnt/content/1TB_2` is 100% full and very slow under load.
