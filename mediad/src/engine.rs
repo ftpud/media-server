@@ -529,6 +529,14 @@ impl Engine {
                     }
                     self.emit_video(a)?;
                     self.audio_for_tick(true, mix)?;
+                    if mix.map(|t| t >= 1.0).unwrap_or(false) {
+                        // crossfade complete: the outgoing track is no longer visible/audible, even if
+                        // its stream runs longer than its container duration claimed
+                        if let Some(h) = self.cur.take() { self.ended(&h.req, "eof"); }
+                        self.cur = self.next.take();
+                        self.xfade_from = None;
+                        self.ending_sent = false;
+                    }
                 }
             }
         }
