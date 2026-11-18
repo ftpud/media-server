@@ -154,6 +154,20 @@ Status legend: `[ ]` todo, `[x]` done, `[?]` needs a decision from the owner.
 - [ ] Interaction with `skip`/`seek` (cut instead of transition when the user skips).
 - [ ] Optional audio crossfade.
 
+## Phase 9: Dashboard rewrite (last phase)
+
+Completely rewrite `dashboard-service` into a nice-looking, usable control panel for all services and daemons (Java services, mediad, ffmpeg), with good UI/UX.
+
+- [ ] Inventory what it must manage: every Java service, `mediad`, the old ffmpeg/publisher/balancer pair (until removed), and the RTMP target.
+- [ ] Backend: replace the shell-string `bash -c` process control with a proper service model (start/stop/restart/deploy, PID tracking without `pgrep -f` substring matching, no `kill -9` by default; graceful stop then force).
+- [ ] Health and metrics per service: up/down, uptime, CPU, RSS, restarts, last error; for mediad also `/status` (current track, position, queue, connected, A/V offset, hw/sw decode) and the event stream.
+- [ ] Logs: live tail (WebSocket/SSE) with search and level highlighting, instead of fetching the last 100 lines.
+- [ ] Stream panel: now playing, upcoming queue, skip/seek/load, overlay/zmq text controls, preview thumbnail of the output.
+- [ ] Server panel: load, CPU/GPU (`intel_gpu_top`), disk space per mount (`/` is nearly full), library stats.
+- [ ] UI: modern responsive single-page app (e.g. a small SPA with a component library), dark/light theme, clear status colors, confirmations for destructive actions, works on a phone.
+- [ ] Security: authentication (at least a token/password), POST for state changes, restrict CORS (the current API is unauthenticated GET-based).
+- [ ] Deploy flow: upload/build artifacts, versioned deploys, one-click rollback.
+
 ## Risks to keep in mind
 
 - A mediad crash stops the whole stream (today a track ffmpeg crash only costs one track): needs the watchdog and the soak test.
