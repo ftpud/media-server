@@ -152,6 +152,8 @@ public class MediadStreamService {
         while (true) {
             try {
                 if (since == 0) {
+                    // skip the event history (e.g. a stale "idle" from before we connected), then start playing
+                    since = get(uri("/events", "since", "0", "wait", "0")).path("next").asLong();
                     reloadCurrent(true);
                 }
                 JsonNode r = get(uri("/events", "since", String.valueOf(since), "wait", "15000"));
