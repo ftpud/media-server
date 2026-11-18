@@ -65,6 +65,11 @@ public class MediaDbService {
     public void init() {
         // Serve immediately from the database; scanning the whole library takes minutes on the
         // slow/failing disks and used to block startup (and therefore the stream) for ~6 minutes.
+        try {
+            removeJunkEntries();
+        } catch (Exception e) {
+            log.error("Junk cleanup failed: {}", e.toString());
+        }
         inMemoryRepository.updateMediaItemsList();
         log.info("Rotation loaded from the database, library scan continues in the background");
         Thread scan = new Thread(() -> {
@@ -176,9 +181,43 @@ public class MediaDbService {
 
     }
 
-    /** macOS AppleDouble / hidden files are not media. */
+    private static final java.util.Set<String> VIDEO_EXT = java.util.Set.of(
+            "mp4", "mkv", "webm", "ts", "flv", "mov", "avi", "m4v", "mpg", "mpeg", "wmv", "m2ts", "vob");
+
+    /** Not media: hidden files (macOS AppleDouble "._x", .DS_Store) and non-video extensions. */
     public static boolean isJunk(File f) {
-        return f.getName().startsWith("._") || f.getName().startsWith(".");
+        return isJunkName(f.getName());
+    }
+
+    public static boolean isJunkName(String rawName) {
+        String name = rawName.trim(); // some stored paths carry a trailing newline/CR
+        int dot = name.lastIndexOf('.');
+        String ext = dot > 0 ? name.substring(dot + 1).toLowerCase() : "";
+        return name.startsWith(".") || !VIDEO_EXT.contains(ext);
+    }
+
+    /**
+     * Removes database entries that can never be media (imported before the junk filter existed):
+     * hidden files (macOS "._x", .DS_Store) and non-video files without a duration (torrents,
+     * subtitles, scripts...). Non-video files that do have a duration (audio, .part downloads) are
+     * kept in the database but never played or listed.
+     */
+    public void removeJunkEntries() {
+        java.util.List<MediaItem> junk = new java.util.ArrayList<>();
+        mediaRepository.findAll().forEach(i -> {
+            if (i.getFullpath() == null) {
+                return;
+            }
+            String name = new File(i.getFullpath()).getName().trim();
+            boolean noDuration = i.getLength() == null || i.getLength() <= 0;
+            if (name.startsWith(".") || (isJunkName(name) && noDuration)) {
+                junk.add(i);
+            }
+        });
+        junk.forEach(mediaRepository::delete);
+        if (!junk.isEmpty()) {
+            log.info("Removed {} non-video entries from the library database", junk.size());
+        }
     }
 
     /** @return true if a volume was measured and stored */

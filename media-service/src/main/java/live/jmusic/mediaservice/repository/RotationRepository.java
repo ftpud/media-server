@@ -26,6 +26,7 @@ public class RotationRepository {
                 .findAll()
                 .stream()
                 .filter(mediaItem -> mediaItem.getFullpath().contains("___UNDERGROUND"))
+                .filter(RotationRepository::isPlayable)
                 .collect(Collectors.toList());
 
         Collections.shuffle(rotationList);
@@ -36,6 +37,7 @@ public class RotationRepository {
         java.util.Set<String> known = rotationList.stream().map(MediaItem::getFullpath).collect(Collectors.toSet());
         List<MediaItem> fresh = mediaRepository.findAll().stream()
                 .filter(m -> m.getFullpath().contains("___UNDERGROUND") && !known.contains(m.getFullpath()))
+                .filter(RotationRepository::isPlayable)
                 .collect(Collectors.toList());
         Collections.shuffle(fresh);
         rotationList.addAll(fresh);
@@ -81,11 +83,21 @@ public class RotationRepository {
         return getItemForTime(0L, false);
     }
 
+    /** A real video with a known duration (length 0 = ffprobe failed; such entries can never play). */
+    public static boolean isPlayable(MediaItem m) {
+        return m != null && m.getFullpath() != null && m.getLength() != null && m.getLength() > 0
+                && !live.jmusic.mediaservice.service.MediaDbService.isJunkName(new File(m.getFullpath()).getName());
+    }
+
+    /** The current item followed by the next playable ones (what mediad will play). */
     public synchronized List<MediaItem> listNext(long time, int number) {
         RotationItem item = getItemForTime(time);
         List<MediaItem> response = new ArrayList<>();
-        for(int i=0; i<number && item.rotationPosition + i < rotationList.size(); i++) {
-            response.add(rotationList.get(item.rotationPosition + i));
+        response.add(rotationList.get(item.rotationPosition));
+        for (int i = item.rotationPosition + 1; i < rotationList.size() && response.size() < number; i++) {
+            if (isPlayable(rotationList.get(i))) {
+                response.add(rotationList.get(i));
+            }
         }
         return response;
     }

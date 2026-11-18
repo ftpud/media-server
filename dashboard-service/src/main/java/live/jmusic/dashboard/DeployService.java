@@ -31,7 +31,9 @@ public class DeployService {
     public Optional<File> pending(ServiceDef d) {
         if (d.jar == null) return Optional.empty();
         File f = new File(registry.deployDir, d.jar);
-        return f.isFile() ? Optional.of(f) : Optional.empty();
+        File installed = new File(registry.appDir, d.jar);
+        // only offer builds that are newer than what is installed (old leftovers must not downgrade)
+        return f.isFile() && (!installed.isFile() || f.lastModified() > installed.lastModified()) ? Optional.of(f) : Optional.empty();
     }
 
     public List<Map<String, Object>> versions(ServiceDef d) {

@@ -191,7 +191,8 @@ public class MediaController {
     LevenshteinDistance levenshteinDistance = new LevenshteinDistance();
 
     private List<MediaItem> searchAll(String query, int limit) {
-        var items = mediaRepository.findAll().stream();
+        var items = mediaRepository.findAll().stream()
+                .filter(i -> i.getFullpath() != null && !MediaDbService.isJunkName(new File(i.getFullpath()).getName()));
         Stream<MediaItem> filtered;
 
         if (query.length() > 2 && query.startsWith("/") && query.endsWith("/")) {
